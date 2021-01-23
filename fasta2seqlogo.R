@@ -38,7 +38,7 @@ fasta <- fasta[!grepl("N", fasta)]
 plot_seqlogo <-function(fasta_string){
     require(seqLogo)
     require(Biostrings)
-    pwm<-consensusMatrix(fasta_string,as.prob=T)[1:4,]
+    pwm<-consensusMatrix(toupper(fasta_string),as.prob=T)[1:4,]
     pwm<-data.frame(pwm)
     seqLogo(makePWM(pwm),ic.scale=FALSE) #ic.scale determines either frequency or bits
     #seqLogo(makePWM(pwm),ic.scale=TRUE) #ic.scale determines either frequency or bits

@@ -15,7 +15,7 @@ usage() {
 	echo Program: "mapSEReads.sh (map single end reads)"
 	echo Author: BRIC, University of Copenhagen, Denmark
 	echo Version: 1.0
-	echo Contact: pundhir@bric.ku.dk
+	echo Contact: pundhir@binf.ku.dk
 	echo "Usage: mapSEReads.sh -i <file> [OPTIONS]"
 	echo "Options:"
 	echo " -i <file>   [input fastq file(s) with single end reads]"
@@ -23,27 +23,18 @@ usage() {
 	echo "[OPTIONS]"
 	echo " -m <dir>    [output directory to store mapped reads (default: .)]"
 	echo " -g <string> [genome (default: mm9)]"
-    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC]"
+    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19]"
+    echo "             [**NOTE**: cases like mm9_hg19: assembly post '_' is considered spikeIn (hg19)]"
     echo " -p <int>    [number of processors (default: 1)]"
+    echo "             [for STAR, keep it max to 20]"
     echo " -d <string> [identifier for output BAM file (default: same as fastq file)]"
     echo " -a <dir>    [directory to keep adapter trimmed fastq files]"
     echo "             [required to auto-trim adapter sequences]"
-    echo " -z <dir>    [directory to keep spike-in normalization files]"
-    echo "             [required to auto-determine scaling factor using splike-in data]"
-    echo " -Z          [only bam to bw coversion; bam file exists]"
-    echo "[OPTIONS: repeats]"
-    echo " -r          [map reads for repeat analysis using bowtie (output multimapped reads)]"
-    echo " -R          [map reads for repeat analysis using bowtie2]"
-    echo "[OPTIONS: tophat2]"
-    echo " -s          [perform alignment accommodating for splice junctions using tophat2]"
-    echo "[OPTIONS: STAR]"
-    echo " -S          [perform alignment accommodating for splice junctions using STAR]"
+    echo " -y <dir>    [copy input fastq file(s) to specified directory for mapping]"
+    echo "             [useful when working on mounted directory]"
+    echo "[OPTIONS: bowtie2 (ChIP- or RNA-seq) (default)]"
     echo " -u          [report only uniquely mapped reads]"
-    echo " -c          [scale the read coverage to TPM in output bigWig files]"
-    echo " -f <int>    [trim <int> bases from 5'/left end of reads (default: 0)]"
-    echo " -t <int>    [trim <int> bases from 3'/right end of reads (default: 0)]"
-    echo "[OPTIONS: bowtie2 (default)]"
-    echo " -u          [report only uniquely mapped reads]"
+    echo " -U          [remove duplicate reads from output bam file (samtools markdup)]"
     echo " -c          [scale the read coverage to TPM in output bigWig files (overridden if -z)]"
     echo " -C          [scale the read coverage to 1x in output bigWig files (overridden if -z)]"
     echo " -e          [extend 3' end of reads in output bigWig files]"
@@ -57,19 +48,38 @@ usage() {
     echo " -I <string> [interval between seed substrings w/r/t read len (default: S,1,1.15)]"
     echo " -D <int>    [give up extending after <int> failed extends in a row (default: 15)]"
     echo " -E <int>    [for reads w/ repetitive seeds, try <int> sets of seeds (default: 2)]"
-    echo "[OPTIONS: Kallisto]"
+    echo " -z <string> [spike-in normalization genome (if combined genome not available, eg. hg19_dm6)]"
+    echo "             [required to auto-determine scaling factor using splike-in data]"
+    echo " -Z          [only bam to bw coversion; bam file exists]"
+    echo " -Y          [no bam to bw coversion]"
+    echo " -r          [map reads for repeat analysis (-u option is ignored)]"
+    echo "[OPTIONS: STAR (RNA-seq)]"
+    echo " -S          [perform alignment accommodating for splice junctions using STAR]"
+    echo " -u          [report only uniquely mapped reads]"
+    echo " -c          [scale the read coverage to TPM in output bigWig files]"
+    echo " -f <int>    [trim <int> bases from 5'/left end of reads (default: 0)]"
+    echo " -t <int>    [trim <int> bases from 3'/right end of reads (default: 0)]"
+    echo " -r          [map reads for repeat analysis (-u option is ignored)]"
+    echo "[OPTIONS: Kallisto (RNA-seq)]"
     echo " -K          [perform alignment using kallisto]"
     echo " -T <int>    [average fragment length (default: 200)]"
     echo " -N <int>    [standard deviation of fragment length (default: 30)]"
     echo "[NOTE: splike-in scaling formula]"
     echo "             [https://www.sciencedirect.com/science/article/pii/S2211124714008729#app3]"
+    echo "[NOTE: mapping to repeats]"
+    echo "             [https://github.com/mhammell-laboratory/TEtranscripts]"
+    echo "             [https://www.nature.com/scitable/topicpage/transposons-the-jumping-genes-518/]"
+    echo "             [https://mobilednajournal.biomedcentral.com/articles/10.1186/s13100-019-0192-1]"
+    echo "             [http://genesdev.cshlp.org/content/28/13/1410.full]"
+    echo "             [https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-017-3566-0]"
+    echo "             [https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM1375157]"
 	echo " -h          [help]"
 	echo
 	exit 0
 }
 
 #### parse options ####
-while getopts i:m:g:p:d:a:z:ZrRsSucCek:q:lf:t:L:I:D:E:KT:N:h ARG; do
+while getopts i:m:g:p:d:a:y:uUcCek:q:lf:t:L:I:D:E:z:ZYrSKT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ=$OPTARG;;
 		m) MAPDIR=$OPTARG;;
@@ -77,13 +87,9 @@ while getopts i:m:g:p:d:a:z:ZrRsSucCek:q:lf:t:L:I:D:E:KT:N:h ARG; do
         p) PROCESSORS=$OPTARG;;
         d) ID=$OPTARG;;
         a) TRIM_FASTQ_DIR=$OPTARG;;
-        z) SPIKEIN=$OPTARG;;
-        Z) BAMTOBW=1;;
-        r) REPENRICH=1;;
-        R) REPEATS=1;;
-        s) TOPHAT2=1;;
-        S) STAR=1;;
+        y) COPYDIR=$OPTARG;;
         u) UNIQUE=1;;
+        U) REMOVE_DUPLICATE=1;;
         c) SCALE=1;;
         C) SCALE1x=1;;
         e) EXTEND=1;;
@@ -96,6 +102,11 @@ while getopts i:m:g:p:d:a:z:ZrRsSucCek:q:lf:t:L:I:D:E:KT:N:h ARG; do
         I) INTERVAL=$OPTARG;;
         D) GIVEUP=$OPTARG;;
         E) TRIES=$OPTARG;;
+        z) SPIKEIN=$OPTARG;;
+        Z) BAMTOBW=1;;
+        Y) NOBAMTOBW=1;;
+        r) REPEATS=1;;
+        S) STAR=1;;
         K) KALLISTO=1;;
         T) KALLISTO_FL=$OPTARG;;
         N) KALLISTO_SD=$OPTARG;;
@@ -113,92 +124,118 @@ echo -n "Create appropriate directory structure... "
 if [ ! -d "$MAPDIR" ]; then
     mkdir $MAPDIR
 fi
+if [ ! -z "$COPYDIR" ]; then
+    echo -n "Copying fastq file(s) to $COPYDIR... "
+    mkdir -p $COPYDIR
+    oIFS=$IFS
+    IFS=","
+    FASTQFILES=($FASTQ)
+    FASTQFILES_COUNT=${#FASTQFILES[@]}
+    IFS=$oIFS
+
+    FASTQ=""
+    for(( i=0; i<$FASTQFILES_COUNT; i++ )); do
+        TEMPID=$(echo ${FASTQFILES[$i]} | perl -ane '$_=~s/^.*\///g; print $_;')
+        if [ ! -s "$COPYDIR/$TEMPID" ]; then
+            scp ${FASTQFILES[$i]} $COPYDIR/$TEMPID
+        fi
+        FASTQ="$FASTQ,$COPYDIR/$TEMPID"
+    done
+    FASTQ=$(echo $FASTQ | perl -ane '$_=~s/^\,//g; print $_;')
+    MAPDIR=$COPYDIR
+fi
+oIFS=$IFS
+IFS=","
+FASTQFILES=($FASTQ)
+FASTQFILES_COUNT=${#FASTQFILES[@]}
+IFS=$oIFS
+for(( i=0; i<$FASTQFILES_COUNT; i++ )); do
+    if [ ! -s "${FASTQFILES[$i]}" ]; then
+        echo
+        echo "fastq file, ${FASTQFILES[$i]} does not exist!!"
+        usage
+    fi
+done
+#echo $FASTQ; exit
 echo done
 
 echo -n "Populating files based on input genome, $GENOME (`date`).. "
 if [ "$GENOME" == "mm9" ]; then
     if [ ! -z "$REPENRICH" ]; then
-        ## tophat (bowtie1 - *ebwt)
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie/Bowtie2IndexWithAbundance"
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/Ensembl/NCBIM37/STAR/"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/Ensembl/NCBIM37/kallisto/Mus_musculus.NCBIM37.67.cdna.all.idx"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/kallisto/Mus_musculus.NCBIM37.67.cdna.all.idx"
     else
-        ## bowtie2 (*bt2)
-        #GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie2/Bowtie2IndexWithAbundance"
-        ## bowtie2 (*bt2 - with chromosome - no scaffolds)
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie2_chr_noscaffold/Bowtie2IndexWithAbundance"
-        FASTAFILE="/home/pundhir/software/RNAPipe/data/Mus_musculus/Ensembl/NCBIM37/TopHatTranscriptomeIndex_with_chr/genes_without_mt"
-        CHRSIZE="/home/pundhir/software/RNAPipe/data/Mus_musculus/Ensembl/NCBIM37/ChromInfoRef.txt"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "mm10" ]; then
     if [ ! -z "$REPENRICH" ]; then
-        ## tophat (bowtie1 - *ebwt)
         GENOMEINDEX=""
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/mm10/STAR/"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/mm10/kallisto/Mus_musculus.GRCm38.cdna.all.idx"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/kallisto/Mus_musculus.GRCm38.cdna.all.idx"
     else
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Mus_musculus/mm10/bowtie2/Bowtie2IndexWithAbundance"
-        FASTAFILE=""
-        CHRSIZE="/home/pundhir/project/genome_annotations/mouse.mm10.genome"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg19" ]; then
     if [ ! -z "$REPENRICH" ]; then
-        ## tophat (bowtie1 - *ebwt)
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie/genome_and_Abundant"
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie/genome_and_Abundant"
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/STAR/"
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/kallisto/"
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/kallisto/Homo_sapiens.GRCh37.cdna.all.idx"
     else
-        ## bowtie2 (*bt2)
-        #GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie2/genome_and_Abundant"
-        ## bowtie2 (*bt2 - with chromosome - no scaffolds)
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie2_chr_noscaffold/genome_and_Abundant"
-        FASTAFILE="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/TopHatTranscriptomeIndex_with_chr/genes_without_mt"
-        CHRSIZE="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/ChromInfoRef.txt"
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg38" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/hg38/STAR/"
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/hg38/kallisto/Homo_sapiens.GRCh38.cdna.all.idx"
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/kallisto/Homo_sapiens.GRCh38.cdna.all.idx"
     else
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/hg38/bowtie2/Bowtie2IndexWithAbundance"
-        FASTAFILE=""
-        CHRSIZE="/home/pundhir/project/genome_annotations/human.hg38.genome"
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg19_ifn" ]; then
-    GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Homo_sapiens/interferon_genes/interferon"
-    FASTAFILE="/home/pundhir/software/RNAPipe/data/Homo_sapiens/interferon_genes/interferon"
-    CHRSIZE="/home/pundhir/software/RNAPipe/data/Homo_sapiens/Ensembl/GRCh37/ChromInfoRef.txt"
+    GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/interferon_genes/interferon"
 elif [ "$GENOME" == "dm6" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Dro_melanogaster/dm6/kallisto/"
+        GENOMEINDEX="/scratch/genomes/assemblies/Dro_melanogaster/dm6/kallisto/"
     else
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/Dro_melanogaster/dm6/bowtie2/Bowtie2IndexWithAbundance"
-        FASTAFILE=""
-        CHRSIZE="/home/pundhir/project/genome_annotations/drosophila.dm6.genome"
+        GENOMEINDEX="/scratch/genomes/assemblies/Dro_melanogaster/dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ERCC" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/ERCC/STAR"
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/ERCC/kallisto/"
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/kallisto/"
     else
-        GENOMEINDEX="/home/pundhir/software/RNAPipe/data/ERCC/bowtie2/Bowtie2IndexWithAbundance"
-        FASTAFILE=""
-        CHRSIZE=""
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/bowtie2/Bowtie2IndexWithAbundance"
+    fi
+elif [ "$GENOME" == "hg19_dm6" ]; then
+    if [ ! -z "$STAR" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/STAR"
+    elif [ ! -z "$KALLISTO" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/kallisto/"
+    else
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/bowtie2/Bowtie2IndexWithAbundance"
+    fi
+elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
+    if [ ! -z "$STAR" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/STAR"
+    elif [ ! -z "$KALLISTO" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/kallisto/"
+    else
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/bowtie2/Bowtie2IndexWithAbundance"
     fi
 else
-    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6 or ERCC"
+    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19"
     echo
     usage
 fi
@@ -242,14 +279,19 @@ if [ ! -z "$SPIKEIN" ]; then
         ARGS="$ARGS -e";
     fi
 
-    if [ -z "$SPIKEIN/$ID.mapStat" ]; then
-        mapSEReads.sh -i $FASTQ -g dm6 -m $SPIKEIN -p $PROCESSORS -d $ID $ARGS
+    ID_SPIKEIN=$ID"_"$SPIKEIN
+
+    if [ -z "$ID_SPIKEIN.mapStat" -a ! -z "$REMOVE_DUPLICATE" ]; then
+        mapSEReads.sh -i $FASTQ -g $SPIKEIN -m $MAPDIR -p $PROCESSORS -d $ID_SPIKEIN -U $ARGS
+        ID_SPIKEIN=$(echo $ID_SPIKEIN"_dupRemoved")
+    else
+        mapSEReads.sh -i $FASTQ -g $SPIKEIN -m $MAPDIR -p $PROCESSORS -d $ID_SPIKEIN $ARGS
     fi
 
     if [ -z "$UNIQUE" ]; then
-        SCALE_SPIKEIN=$(zless $SPIKEIN/$ID.mapStat | grep 'aligned exactly\|aligned >1' | perl -ane '$sum+=$F[0]; END { print "$sum\n"; }')
+        SCALE_SPIKEIN=$(zless $MAPDIR/$ID_SPIKEIN.mapStat | grep 'aligned exactly\|aligned >1' | perl -ane '$sum+=$F[0]; END { print "$sum\n"; }')
     else
-        SCALE_SPIKEIN=$(zless $SPIKEIN/$ID.mapStat | grep 'aligned exactly' | perl -ane '$sum+=$F[0]; END { print "$sum\n"; }')
+        SCALE_SPIKEIN=$(zless $MAPDIR/$ID_SPIKEIN.mapStat | grep 'aligned exactly' | perl -ane '$sum+=$F[0]; END { print "$sum\n"; }')
     fi
 
     SCALE_SPIKEIN=$(echo $SCALE_SPIKEIN | perl -ane 'printf("%0.6f", 1000000/$_);');
@@ -264,9 +306,13 @@ if [ ! -z "$STAR" ]; then
     else
         ARGS="$ARGS --outWigNorm None";
     fi
+    
+    if [ ! -z "$UNIQUE" ]; then
+        ARGS="$ARGS --outFilterMultimapNmax 1";
+    fi
 else
     ARGS=""
-    if [ ! -z "$ALNCOUNT" ]; then
+    if [ ! -z "$ALNCOUNT" -a -z "$REPEATS" ]; then
         ARGS="$ARGS -k $ALNCOUNT";
     fi
 
@@ -274,24 +320,24 @@ else
         ARGS="$ARGS --local";
     fi
 
-    if [ ! -z "$SEED" ]; then
+    if [ ! -z "$SEED" -a -z "$REPEATS" ]; then
         ARGS="$ARGS -L $SEED";
     fi
 
-    if [ ! -z "$INTERVAL" ]; then
+    if [ ! -z "$INTERVAL" -a -z "$REPEATS" ]; then
         ARGS="$ARGS -i $INTERVAL";
     fi
 
-    if [ ! -z "$GIVEUP" ]; then
+    if [ ! -z "$GIVEUP" -a -z "$REPEATS" ]; then
         ARGS="$ARGS -D $GIVEUP";
     fi
 
-    if [ ! -z "$TRIES" ]; then
+    if [ ! -z "$TRIES" -a -z "$REPEATS" ]; then
         ARGS="$ARGS -R $TRIES";
     fi
 fi
 
-#echo "$FASTAFILE $GENOMEINDEX $READDIR $ID"; exit;
+#echo "$GENOMEINDEX $READDIR $ID"; exit;
 
 ## start analysis
 if [ ! -z "$STAR" ]; then
@@ -300,9 +346,16 @@ if [ ! -z "$STAR" ]; then
 
         FASTQ=$(echo $FASTQ | sed 's/ /\,/g')
 
-        echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn <(gunzip -c $FASTQ) --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS" >> $MAPDIR/$ID.mapStat
+        if [ -z "$REPEATS" ]; then
+            echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn <(gunzip -c $FASTQ) --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS" >> $MAPDIR/$ID.mapStat
 
-        STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn <(gunzip -c $FASTQ) --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS
+            STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn <(gunzip -c $FASTQ) --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS
+        else
+            echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn <(gunzip -c $FASTQ) --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded --outFilterMultimapNmax 10000 --winAnchorMultimapNmax 10000 --outSAMmultNmax 1 --alignTranscriptsPerReadNmax 15000 $ARGS" >> $MAPDIR/$ID.mapStat
+
+            STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn <(gunzip -c $FASTQ) --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded --outFilterMultimapNmax 10000 --winAnchorMultimapNmax 10000 --outSAMmultNmax 1 --alignTranscriptsPerReadNmax 15000 $ARGS
+        fi
+
         mv $MAPDIR/$ID"Aligned.sortedByCoord.out.bam" $MAPDIR/$ID.bam
         zless $MAPDIR/$ID"Log.final.out" >> $MAPDIR/$ID.mapStat
         zless $MAPDIR/$ID"Log.progress.out" >> $MAPDIR/$ID.mapStat
@@ -312,84 +365,92 @@ if [ ! -z "$STAR" ]; then
         rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
 
         if [ ! -z "$UNIQUE" ]; then
-            mv $MAPDIR/$ID"Signal.Unique.str1.out.bg" $MAPDIR/$ID.bw
+            mv $MAPDIR/$ID"Signal.Unique.str1.out.bg" $MAPDIR/$ID.bg
             rm $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" 
         else
-            mv $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" $MAPDIR/$ID.bw
+            mv $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" $MAPDIR/$ID.bg
             rm $MAPDIR/$ID"Signal.Unique.str1.out.bg"
         fi
     fi
-elif [ ! -z "$TOPHAT2" ]; then
-    if [ -z "$BAMTOBW" ]; then
-        echo "Map for $ID... " >$MAPDIR/$ID.mapStat
-
-        echo "Command used: tophat2 -p $PROCESSORS --b2-sensitive --transcriptome-index=$FASTAFILE --library-type=fr-unstranded -o $MAPDIR/$ID $GENOMEINDEX $FASTQ" >>$MAPDIR/$ID.mapStat
-        tophat2 -p $PROCESSORS --b2-sensitive --transcriptome-index=$FASTAFILE --library-type=fr-unstranded -o $MAPDIR/$ID $GENOMEINDEX $FASTQ
-
-        ## compute mapping statistics
-        mv $MAPDIR/$ID/accepted_hits.bam $MAPDIR/$ID.bam
-        samtools index $MAPDIR/$ID.bam
-        zless $MAPDIR/$ID/align_summary.txt >> $MAPDIR/$ID.mapStat
-    fi
-
-    ## create bigwig files for viualization at the UCSC genome browser
-    bedtools bamtobed -i $MAPDIR/$ID.bam -bed12 | grep '^[1-9XY]' | awk '{print "chr"$0}' > $MAPDIR/$ID/accepted_hits_corrected.bed && bedtools genomecov -bg -i $MAPDIR/$ID/accepted_hits_corrected.bed -g $CHRSIZE -split > $MAPDIR/$ID/accepted_hits.bedGraph && bedGraphToBigWig $MAPDIR/$ID/accepted_hits.bedGraph $CHRSIZE $MAPDIR/$ID.bw && rm $MAPDIR/$ID/accepted_hits.bedGraph
-elif [ ! -z "$REPENRICH" ]; then
-    if [ -z "$BAMTOBW" ]; then
-        echo "Map for $ID... " >$MAPDIR/$ID.mapStat
-
-        echo "Command used: bowtie $GENOMEINDEX -p $PROCESSORS -t -m 1 -S --max $MAPDIR/$ID'_multimap.fastq' $FASTQ $MAPDIR/$ID'_unique.sam'" >> $MAPDIR/$ID.mapStat
-
-        bowtie $GENOMEINDEX -p $PROCESSORS -t -m 1 -S --max $MAPDIR/$ID"_multimap.fastq" $FASTQ $MAPDIR/$ID"_unique.sam" 2>>$MAPDIR/$ID.mapStat
-        samtools view -bS $MAPDIR/$ID"_unique.sam" > $MAPDIR/$ID"_unique.bam"
-        samtools sort $MAPDIR/$ID"_unique.bam" -o $MAPDIR/$ID"_unique_sorted.bam"
-        mv $MAPDIR/$ID"_unique_sorted.bam" $MAPDIR/$ID"_unique.bam"
-        samtools index $MAPDIR/$ID"_unique.bam"
-        #rm $MAPDIR/$ID"_unique.sam"
-    fi
-elif [ ! -z "$REPEATS" ]; then
-    if [ -z "$BAMTOBW" ]; then
-        ## inspired from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM1375157
-        echo "Map for $ID... " >$MAPDIR/$ID.mapStat
-
-        ## command check
-        echo "Command used: zless $FASTQ | /home/pundhir/software/bowtie2-2.0.0-beta6/bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -M 10000" >>$MAPDIR/$ID.mapStat
-
-        zless $FASTQ | /home/pundhir/software/bowtie2-2.0.0-beta6/bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -M 10000 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - -o $MAPDIR/$ID.bam 
-
-        samtools index $MAPDIR/$ID.bam
-    fi
 elif [ ! -z "$KALLISTO" ]; then
     if [ -z "$BAMTOBW" ]; then
-        ## customize output directory in case it is not provided
-        if [ "$MAPDIR" -eq "." ]; then
-            MAPDIR=$ID
-            mkdir $MAPDIR
-        fi
-        kallisto quant -i $GENOMEINDEX -o $MAPDIR -b 100 --single --bias -l $KALLISTO_FL -s $KALLISTO_SD -t $PROCESSORS $FASTQ
+        echo "Map for $ID... "
+        kallisto quant -i $GENOMEINDEX -o $MAPDIR/$ID -b 100 --single --bias -l $KALLISTO_FL -s $KALLISTO_SD -t $PROCESSORS $FASTQ
     fi
 else
     if [ -z "$BAMTOBW" ]; then
         echo "Map for $ID... " >$MAPDIR/$ID.mapStat
 
-        ## command check
-        echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS" >>$MAPDIR/$ID.mapStat
+        if [ -z "$REPEATS" ]; then
+            ## command check
+            echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS" >>$MAPDIR/$ID.mapStat
 
-        if [ ! -z "$UNIQUE" ]; then
-                zless $FASTQ  | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -S -b - | samtools sort -m 1500M - -o $MAPDIR/$ID.bam
+            if [ ! -z "$UNIQUE" ]; then
+                zless $FASTQ  | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+            else
+                zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+            fi
         else
-            zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - -o $MAPDIR/$ID.bam
+            ## computationally not feasible
+            #echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000" >>$MAPDIR/$ID.mapStat
+            #zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+            ## limited use, no NH: tag information
+            echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS" >>$MAPDIR/$ID.mapStat
+            zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+        fi
+
+        ## remove PCR duplicate reads (important for ChIP-seq data)
+        if [ ! -z "$REMOVE_DUPLICATE" ]; then
+            samtools markdup -r $MAPDIR/$ID.bam $MAPDIR/$ID"_dupRemoved".bam
+            ID=$(echo $ID"_dupRemoved")
         fi
 
         ## compute mapping statistics
         ## idxstat format: The output is TAB delimited with each line consisting of reference sequence name, sequence length, # mapped reads and # unmapped reads. 
         #samtools index $MAPDIR/$ID.bam && samtools idxstats $MAPDIR/$ID.bam > $MAPDIR/$ID.MappingStatistics.txt && perl -ane 'print "$F[0]\t$F[2]\t'$ID'\n";' $MAPDIR/$ID.MappingStatistics.txt >> $MAPDIR/concatenated_accepted_MappingStatistics.txt
         samtools index $MAPDIR/$ID.bam
+    else
+        if [ ! -z "$REMOVE_DUPLICATE" ]; then
+            ID=$(echo $ID"_dupRemoved")
+        fi
     fi
 fi 
 
+## split bam file, if mapped to multiple genome assemblies (splike-in control)
+if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
+    GENOME_SPIKEIN=$(echo $GENOME | sed 's/.*\_//g')
+
+    CHROM=$(samtools view -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME_SPIKEIN | perl -ane 'chomp($_); print "$_ ";');
+    #echo "$GENOME_SPIKEIN $CHROM"; exit
+
+    if [ -z "$BAMTOBW" ]; then
+        samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
+    fi
+
+    GENOME=$(echo $GENOME | sed 's/\_.*//g')
+
+    CHROM=$(samtools view -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME | perl -ane 'chomp($_); print "$_ ";');
+
+    if [ -z "$BAMTOBW" ]; then
+        samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME.bam
+
+        samtools index $MAPDIR/$ID"_"$GENOME.bam
+    fi
+
+    #if [ -z "$REPEATS" ]; then
+        SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "mapped (" | cut -f 1 -d " " | perl -ane 'printf("%0.6f", 1000000/$_);');
+    #else 
+    #    SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam -u);
+    #fi
+
+    SPIKEIN=$GENOME_SPIKEIN
+
+    ID=$(echo $ID"_"$GENOME)
+fi
+#echo $SCALE_SPIKEIN; exit
+
 ## create bigwig files for visualization at the UCSC genome browser
-if [ ! -z "$REPENRICH" -o ! -z "$REPEATS" -o -z "$STAR" -a -z "$TOPHAT2" -a -z "$KALLISTO" ]; then
+if [ -z "$STAR" -a -z "$KALLISTO" -a -z "$NOBAMTOBW" ]; then
     if [ ! -z "$SPIKEIN" ]; then
         echo -e "Using spike-in scale, $SCALE_SPIKEIN to normalize bigWig files.. "
         if [ ! -z "$EXTEND" ]; then
@@ -425,3 +486,65 @@ if [ ! -z "$REPENRICH" -o ! -z "$REPEATS" -o -z "$STAR" -a -z "$TOPHAT2" -a -z "
     fi
 fi
 echo "done"
+
+if [ ! -z "$COPYDIR" ]; then
+    echo -n "Delete copied fastq file(s) from $COPYDIR... "
+    FASTQ=$(echo $FASTQ | sed 's/\,/ /g')
+    rm $FASTQ
+    ## parse input fastq files in an array
+    # FASTQ=$(echo $FASTQ | sed 's/ /\,/g')
+    # oIFS=$IFS
+    # IFS=","
+    # FASTQFILES=($FASTQ)
+    # FASTQFILES_COUNT=${#FASTQFILES[@]}
+    # IFS=$oIFS
+
+    # for(( i=0; i<$FASTQFILES_COUNT; i++ )); do
+    #    if [ ! -s "${FASTQFILES[$i]}" ]; then
+    #        rm ${FASTQFILES[$i]}
+    #    fi
+    # done
+    # echo "done"
+fi
+
+## OLD OPTIONS (TopHap2, repeats, RepEnrich): 
+#elif [ ! -z "$TOPHAT2" ]; then
+#    if [ -z "$BAMTOBW" ]; then
+#        echo "Map for $ID... " >$MAPDIR/$ID.mapStat
+#
+#        echo "Command used: tophat2 -p $PROCESSORS --b2-sensitive --transcriptome-index=$FASTAFILE --library-type=fr-unstranded -o $MAPDIR/$ID $GENOMEINDEX $FASTQ" >>$MAPDIR/$ID.mapStat
+#        tophat2 -p $PROCESSORS --b2-sensitive --transcriptome-index=$FASTAFILE --library-type=fr-unstranded -o $MAPDIR/$ID $GENOMEINDEX $FASTQ
+#
+#        ## compute mapping statistics
+#        mv $MAPDIR/$ID/accepted_hits.bam $MAPDIR/$ID.bam
+#        samtools index $MAPDIR/$ID.bam
+#        zless $MAPDIR/$ID/align_summary.txt >> $MAPDIR/$ID.mapStat
+#    fi
+#
+#    ## create bigwig files for viualization at the UCSC genome browser
+#    bedtools bamtobed -i $MAPDIR/$ID.bam -bed12 | grep '^[1-9XY]' | awk '{print "chr"$0}' > $MAPDIR/$ID/accepted_hits_corrected.bed && bedtools genomecov -bg -i $MAPDIR/$ID/accepted_hits_corrected.bed -g $CHRSIZE -split > $MAPDIR/$ID/accepted_hits.bedGraph && bedGraphToBigWig $MAPDIR/$ID/accepted_hits.bedGraph $CHRSIZE $MAPDIR/$ID.bw && rm $MAPDIR/$ID/accepted_hits.bedGraph
+#elif [ ! -z "$REPENRICH" ]; then
+#    if [ -z "$BAMTOBW" ]; then
+#        echo "Map for $ID... " >$MAPDIR/$ID.mapStat
+#
+#        echo "Command used: bowtie $GENOMEINDEX -p $PROCESSORS -t -m 1 -S --max $MAPDIR/$ID'_multimap.fastq' $FASTQ $MAPDIR/$ID'_unique.sam'" >> $MAPDIR/$ID.mapStat
+#
+#        bowtie $GENOMEINDEX -p $PROCESSORS -t -m 1 -S --max $MAPDIR/$ID"_multimap.fastq" $FASTQ $MAPDIR/$ID"_unique.sam" 2>>$MAPDIR/$ID.mapStat
+#        samtools view -bS $MAPDIR/$ID"_unique.sam" > $MAPDIR/$ID"_unique.bam"
+#        samtools sort $MAPDIR/$ID"_unique.bam" -o $MAPDIR/$ID"_unique_sorted.bam"
+#        mv $MAPDIR/$ID"_unique_sorted.bam" $MAPDIR/$ID"_unique.bam"
+#        samtools index $MAPDIR/$ID"_unique.bam"
+#        #rm $MAPDIR/$ID"_unique.sam"
+#    fi
+#elif [ ! -z "$REPEATS" ]; then
+#    if [ -z "$BAMTOBW" ]; then
+#        ## inspired from https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM1375157
+#        echo "Map for $ID... " >$MAPDIR/$ID.mapStat
+#
+#        ## command check
+#        echo "Command used: zless $FASTQ | /home/pundhir/software/bowtie2-2.0.0-beta6/bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -M 10000" >>$MAPDIR/$ID.mapStat
+#
+#        zless $FASTQ | /home/pundhir/software/bowtie2-2.0.0-beta6/bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -M 10000 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - -o $MAPDIR/$ID.bam 
+#
+#        samtools index $MAPDIR/$ID.bam
+#    fi

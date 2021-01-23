@@ -56,15 +56,13 @@ data[,1] <- gsub("\\..*", "", data[,1])
 ## NOTE: external_gene_name is only available with host=grch37.ensembl.org
 
 if(opt$organism=="hg19") {
-    #mart = useMart(host = "feb2014.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
     mart = useMart(host = "grch37.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
 } else if(opt$organism=="mm9") {
     mart = useMart(host = "may2012.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
 } else if(opt$organism=="hg38") {
-    mart = useMart(host = "dec2017.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+    mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
 } else if(opt$organism=="mm10") {
-    #mart = useMart(host = "dec2017.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
-    mart = useMart(host = "grch37.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
+    mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
 } else {
 	cat("Unknown organism provided\n");
 	print_help(parser)
