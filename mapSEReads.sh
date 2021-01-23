@@ -256,6 +256,9 @@ if [ ! -z "$TRIM_FASTQ_DIR" -a -z "$BAMTOBW" ]; then
         if [ ! -f "$TRIM_FASTQ_DIR/$TEMPID.clipped.fastq.gz" ]; then
             trimAdapters.sh -i ${FASTQFILES[$i]} -r $TRIM_FASTQ_DIR -a auto
         fi
+        if [ ! -z "$COPYDIR" ]; then
+            rm ${FASTQFILES[$i]}
+        fi
         FASTQ="$FASTQ,$TRIM_FASTQ_DIR/$TEMPID.clipped.fastq.gz"
     done
     FASTQ=$(echo $FASTQ | perl -ane '$_=~s/^\,//g; print $_;')
