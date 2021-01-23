@@ -169,6 +169,7 @@ if [ ! -z "$COPYDIR" ]; then
     FASTQ_REVERSE=$(echo $FASTQ_REVERSE | perl -ane '$_=~s/^\,//g; print $_;')
     MAPDIR=$COPYDIR
 fi
+#echo "$FASTQ_FORWARD"; echo "$FASTQ_REVERSE"; exit
 echo done
 
 echo -n "Populating files based on input genome, $GENOME (`date`).. "
