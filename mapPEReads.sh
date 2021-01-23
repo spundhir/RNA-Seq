@@ -136,17 +136,37 @@ fi
 if [ ! -z "$COPYDIR" ]; then
     echo -n "Copying fastq file(s) to $COPYDIR... "
     mkdir -p $COPYDIR
-    TEMPID_FORWARD=$(echo $FASTQ_FORWARD | perl -ane '$_=~s/^.*\///g; print $_;')
-    if [ ! -s "$COPYDIR/$TEMPID_FORWARD" ]; then
-        scp $FASTQ_FORWARD $COPYDIR/$TEMPID_FORWARD
-    fi
-    FASTQ_FORWARD="$COPYDIR/$TEMPID_FORWARD"
+    oIFS=$IFS
+    IFS=","
+    FASTQFILES=($FASTQ_FORWARD)
+    FASTQFILES_COUNT=${#FASTQFILES[@]}
+    IFS=$oIFS
 
-    TEMPID_REVERSE=$(echo $FASTQ_REVERSE | perl -ane '$_=~s/^.*\///g; print $_;')
-    if [ ! -s "$COPYDIR/$TEMPID_REVERSE" ]; then
-        scp $FASTQ_REVERSE $COPYDIR/$TEMPID_REVERSE
-    fi
-    FASTQ_REVERSE="$COPYDIR/$TEMPID_REVERSE"
+    FASTQ_FORWARD=""
+    for(( i=0; i<$FASTQFILES_COUNT; i++ )); do
+        TEMPID=$(echo ${FASTQFILES[$i]} | perl -ane '$_=~s/^.*\///g; print $_;')
+        if [ ! -s "$COPYDIR/$TEMPID" ]; then
+            scp ${FASTQFILES[$i]} $COPYDIR/$TEMPID
+        fi
+        FASTQ_FORWARD="$FASTQ_FORWARD,$COPYDIR/$TEMPID"
+    done
+    FASTQ_FORWARD=$(echo $FASTQ_FORWARD | perl -ane '$_=~s/^\,//g; print $_;')
+
+    oIFS=$IFS
+    IFS=","
+    FASTQFILES=($FASTQ_REVERSE)
+    FASTQFILES_COUNT=${#FASTQFILES[@]}
+    IFS=$oIFS
+
+    FASTQ_REVERSE=""
+    for(( i=0; i<$FASTQFILES_COUNT; i++ )); do
+        TEMPID=$(echo ${FASTQFILES[$i]} | perl -ane '$_=~s/^.*\///g; print $_;')
+        if [ ! -s "$COPYDIR/$TEMPID" ]; then
+            scp ${FASTQFILES[$i]} $COPYDIR/$TEMPID
+        fi
+        FASTQ_REVERSE="$FASTQ_REVERSE,$COPYDIR/$TEMPID"
+    done
+    FASTQ_REVERSE=$(echo $FASTQ_REVERSE | perl -ane '$_=~s/^\,//g; print $_;')
     MAPDIR=$COPYDIR
 fi
 echo done
