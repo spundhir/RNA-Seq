@@ -97,7 +97,8 @@ if [ ! -z "${ADAPTER}" -a ! -z "${READDIR}" ]; then
         if [ ! -f "$READDIR/$ID"_fastqc"/fastqc_data.txt" ]; then
             qualityCheck.sh -i $FASTQ -q $READDIR
         fi
-        zless $READDIR/$ID"_fastqc"/fastqc_data.txt | perl -ane 'if($_=~/\>\>Overrepresented/) { $start=1; } elsif($_=~/END\_MODULE/) { $start=0; } if($start) { print $_; }' | grep -v Overrepresented  | grep -v Sequence | cut -f 1 | sort | uniq | perl -ane '$i++; print ">adapter$i\n$_";' > $ID.ADAPTERS
+        #zless $READDIR/$ID"_fastqc"/fastqc_data.txt | perl -ane 'if($_=~/\>\>Overrepresented/) { $start=1; } elsif($_=~/END\_MODULE/) { $start=0; } if($start) { print $_; }' | grep -v Overrepresented  | grep -v Sequence | cut -f 1 | sort | uniq | perl -ane '$i++; print ">adapter$i\n$_";' > $ID.ADAPTERS
+        unzip -p $READDIR/$ID"_fastqc.zip" $ID"_fastqc"/fastqc_data.txt | perl -ane 'if($_=~/\>\>Overrepresented/) { $start=1; } elsif($_=~/END\_MODULE/) { $start=0; } if($start) { print $_; }' | grep -v Overrepresented  | grep -v Sequence | cut -f 1 | sort | uniq | perl -ane '$i++; print ">adapter$i\n$_";' > $ID.ADAPTERS
 
         # trim first few nucleotides
         if [ ! -z "$LASTBASE" ]; then
