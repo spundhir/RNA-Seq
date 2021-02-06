@@ -36,7 +36,7 @@ usage() {
     echo "             [useful when working on mounted directory]" 
     echo "[OPTIONS: bowtie2 (ChIP- or RNA-seq) (default)]"
     echo " -u          [report only uniquely mapped reads]"
-    echo " -U          [remove duplicate reads from output bam file (samtools markdup)]"
+    echo " -U          [remove PCR duplicate reads from output bam file (samtools markdup)]"
     echo " -c          [scale the read coverage to TPM in output bigWig files]"
     echo " -C          [scale the read coverage to 1x in output bigWig files]"
     echo " -e          [extend 3' end of reads in output bigWig files]"
