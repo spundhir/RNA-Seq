@@ -27,7 +27,7 @@ usage() {
 	echo "[OPTIONS]"
 	echo " -m <dir>    [output directory to store mapped reads (default: .)]"
 	echo " -g <string> [genome (default: mm9)]"
-    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19]"
+    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, mm9_dm6, hg19_mm9, mm9_hg19]"
     echo "             [**NOTE**: cases like mm9_hg19: assembly post '_' is considered spikeIn (hg19)]"
     echo " -p <int>    [number of processors (default: 1)]"
     echo "             [for STAR, keep it max to 20]"
@@ -239,6 +239,14 @@ elif [ "$GENOME" == "hg19_dm6" ]; then
     else
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
+elif [ "$GENOME" == "mm9_dm6" ]; then
+    if [ ! -z "$STAR" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/STAR"
+    elif [ ! -z "$KALLISTO" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/kallisto/"
+    else
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/bowtie2/Bowtie2IndexWithAbundance"
+    fi
 elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/STAR"
@@ -248,7 +256,7 @@ elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/bowtie2/Bowtie2IndexWithAbundance"
     fi
 else
-    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19"
+    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, mm9_dm6, hg19_mm9, mm9_hg19"
     echo
     usage
 fi
