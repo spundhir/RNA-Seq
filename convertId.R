@@ -3,7 +3,7 @@ suppressPackageStartupMessages(library("optparse"))
 
 ## parse command line arguments
 option_list <- list(
-	make_option(c("-i", "--inFile"), help="input file (can be stdin)"),
+	make_option(c("-i", "--inFile"), help="input file (can be stdin; format: ensembl_id <...>)"),
 	make_option(c("-r", "--organism"), default="hg19", help="organsim name (hg19, mm9, hg38, mm10) (default: %default)"),
 	make_option(c("-d", "--header"), default=T, help="if file has header (default: %default)"),
 	make_option(c("-t", "--tab"), help="file is tab separated", action="store_true"),
