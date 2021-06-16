@@ -9,7 +9,7 @@ option_list <- list(
     make_option(c("-n", "--normalized"), help="input file contains normalized read couts", action="store_true"),
     make_option(c("-t", "--treatment"), help="A comma seperated list about description of the data, example: WT,WT,WT,KO,KO,KO (must be equal to the number of samples for which read count is measured in read count file)"),
 	make_option(c("-c", "--condition"), help="A comma seperated list about additonal description of the data, example: T1,T2,T2,T1,T2,T2 (must be equal to the number of samples for which read count is measured in read count file)"),
-    make_option(c("-x", "--noheader"), action="store_true", help="input file do not have header)")
+    make_option(c("-x", "--noheader"), action="store_true", help="input file do not have header")
 )
 
 parser <- OptionParser(usage = "%prog [options]", option_list=option_list)
@@ -146,9 +146,15 @@ outFile <- unlist(strsplit(opt$countFile, "/"))[length(unlist(strsplit(opt$count
 
 ## print results sort by log2foldchange and p-value
 ## all genes
+resWithCounts$class <- "neutral"
+resWithCounts[which(resWithCounts$padj<0.05 & resWithCounts$log2FoldChange>0),]$class <- "up"
+resWithCounts[which(resWithCounts$padj<0.05 & resWithCounts$log2FoldChange<0),]$class <- "down"
 write.table(as.data.frame(resWithCounts[order(-abs(resWithCounts$log2FoldChange), resWithCounts$padj),]), file=sprintf("%s/%s.all.xls", opt$outDir, outFile), quote=F, sep="\t", row.names=F)
 
 ## differentially expressed genes
+resSig$class <- "neutral"
+resSig[which(resSig$padj<0.05 & resSig$log2FoldChange>0),]$class <- "up"
+resSig[which(resSig$padj<0.05 & resSig$log2FoldChange<0),]$class <- "down"
 write.table(as.data.frame(resSig[order(-abs(resSig$log2FoldChange), resSig$padj),]), file=sprintf("%s/%s.de.xls", opt$outDir, outFile), quote=F, sep="\t", row.names=F)
 
 ## kind of log output
