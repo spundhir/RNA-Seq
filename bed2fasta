@@ -67,15 +67,15 @@ fi
 if [ "$BASED" -eq 0 ]; then
     if [ ! -z "$STRAND" ]; then
         #cat $COORFILE | perl -ane 'chomp($_); @t=split(/[\:\-]+/,$_); print "$t[0]\t$t[1]\t$t[2]\tCOOR\t1\t$F[5]\n";' | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout -s
-        cat $COORFILE | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout -s
+        cat $COORFILE | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout -s -name
     else
-        cat $COORFILE | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout
+        cat $COORFILE | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout -name
     fi
 else
     if [ ! -z "$STRAND" ]; then
-        cat $COORFILE | perl -ane 'chomp($_); $F[1]=$F[1]-1; print "$F[0]"; foreach(@F[1..scalar(@F)-1) { print "\t$_"; } print "\n";' | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout -s
+        cat $COORFILE | perl -ane 'chomp($_); $F[1]=$F[1]-1; print "$F[0]"; foreach(@F[1..scalar(@F)-1) { print "\t$_"; } print "\n";' | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout -s -name
     else
-        cat $COORFILE | perl -ane 'chomp($_); $F[1]=$F[1]-1; print "$F[0]"; foreach(@F[1..scalar(@F)-1) { print "\t$_"; } print "\n";' | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout
+        cat $COORFILE | perl -ane 'chomp($_); $F[1]=$F[1]-1; print "$F[0]"; foreach(@F[1..scalar(@F)-1) { print "\t$_"; } print "\n";' | bedtools getfasta -fi $FASTAFILE -bed stdin -fo stdout -name
     fi
 fi
 
