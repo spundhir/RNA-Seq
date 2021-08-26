@@ -53,6 +53,7 @@ usage() {
     echo " -Z          [only bam to bw coversion; bam file exists]"
     echo " -Y          [no bam to bw coversion]"
     echo " -r          [map reads for repeat analysis (-u option is ignored)]"
+    echo " -H          [map reads for HiC data analysis (--reorder --local)]"
     echo "[OPTIONS: STAR (RNA-seq)]"
     echo " -S          [perform alignment accommodating for splice junctions using STAR]"
     echo " -u          [report only uniquely mapped reads]"
@@ -73,13 +74,15 @@ usage() {
     echo "             [http://genesdev.cshlp.org/content/28/13/1410.full]"
     echo "             [https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-017-3566-0]"
     echo "             [https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM1375157]"
+    echo "[NOTE: mapping for HiC data]"
+    echo "             [https://hicexplorer.readthedocs.io/en/latest/content/mES-HiC_analysis.html"
 	echo " -h          [help]"
 	echo
 	exit 0
 }
 
 #### parse options ####
-while getopts i:m:g:p:d:a:y:uUcCek:q:lf:t:L:I:D:E:z:ZYrSKT:N:h ARG; do
+while getopts i:m:g:p:d:a:y:uUcCek:q:lf:t:L:I:D:E:z:ZYrHSKT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ=$OPTARG;;
 		m) MAPDIR=$OPTARG;;
@@ -106,6 +109,7 @@ while getopts i:m:g:p:d:a:y:uUcCek:q:lf:t:L:I:D:E:z:ZYrSKT:N:h ARG; do
         Z) BAMTOBW=1;;
         Y) NOBAMTOBW=1;;
         r) REPEATS=1;;
+        H) HIC=1;;
         S) STAR=1;;
         K) KALLISTO=1;;
         T) KALLISTO_FL=$OPTARG;;
@@ -388,6 +392,12 @@ elif [ ! -z "$KALLISTO" ]; then
         echo "Map for $ID... "
         kallisto quant -i $GENOMEINDEX -o $MAPDIR/$ID -b 100 --single --bias -l $KALLISTO_FL -s $KALLISTO_SD -t $PROCESSORS $FASTQ
     fi
+elif [ ! -z "$HIC" ]; then
+    if [ -z "$BAMTOBW" ]; then
+        echo "Map for $ID... "
+        # https://hicexplorer.readthedocs.io/en/latest/content/mES-HiC_analysis.html
+        bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U $FASTQ --reorder --local 2>>$MAPDIR/$ID.mapStat | samtools view -Shb - > $MAPDIR/$ID.bam 
+    fi
 else
     if [ -z "$BAMTOBW" ]; then
         echo "Map for $ID... " >$MAPDIR/$ID.mapStat
@@ -461,7 +471,7 @@ fi
 #echo $SCALE_SPIKEIN; exit
 
 ## create bigwig files for visualization at the UCSC genome browser
-if [ -z "$STAR" -a -z "$KALLISTO" -a -z "$NOBAMTOBW" ]; then
+if [ -z "$STAR" -a -z "$KALLISTO" -a -z "$HIC" -a -z "$NOBAMTOBW" ]; then
     if [ ! -z "$SPIKEIN" ]; then
         echo -e "Using spike-in scale, $SCALE_SPIKEIN to normalize bigWig files.. "
         if [ ! -z "$EXTEND" ]; then
