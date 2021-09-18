@@ -78,6 +78,8 @@ usage() {
     echo "             [http://genesdev.cshlp.org/content/28/13/1410.full]"
     echo "             [https://bmcgenomics.biomedcentral.com/articles/10.1186/s12864-017-3566-0]"
     echo "             [https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSM1375157]"
+    echo "[NOTE: samtools flag meaning]"
+    echo "             [http://broadinstitute.github.io/picard/explain-flags.html]"
 	echo " -h          [help]"
 	echo
 	exit 0
@@ -438,7 +440,8 @@ COMMENT
             samtools index $MAPDIR/$ID"_"$GENOME.bam
         fi
 
-        SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "properly paired (" | cut -f 1 -d " " | perl -ane '$_=sprintf("%0.0f", $_/2); printf("%0.6f", 1000000/$_);');
+        SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/${ID}_${GENOME_SPIKEIN}.bam)
+        #SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "properly paired (" | cut -f 1 -d " " | perl -ane '$_=sprintf("%0.0f", $_/2); printf("%0.6f", 1000000/$_);');
 
         ID=$(echo $ID"_"$GENOME)
     fi

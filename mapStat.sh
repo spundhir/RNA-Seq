@@ -16,6 +16,11 @@ usage() {
 	echo " -f <file>   [input FASTQ (clipped read) file (optional)]"
     echo " -S          [compute mapping statistics for STAR alignment results]"
 	echo " -h          [help]"
+    echo "[NOTE]"
+    echo "             [mapping statistics are computed using:]"
+    echo "             [1. .mapStat file (from bowtie2) -> id; #reads (for mapping); #reads (paired); #reads (unmapped); #reads (aligned 1 time); #reads (aligned >1 time)]"
+    echo "             [2. samtools idxstats (spike-in only) -> dm6 (mapped); mm9 (mapped)]"
+    echo "             [3. samtools flagstat -> #reads (QC-passed); #reads (mapped); #reads (paired); #reads (singleton); #reads (PCR duplicates)]"
 	echo
 	exit 0
 }
@@ -70,6 +75,7 @@ if [ -z "$STAR" ]; then
         ## tabulate mapping statistics (header)
         echo -ne "id\t#reads (raw)\t#reads (after qualityCheck)\t#reads (for mapping)\t#reads (unpaired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
         if [ ! -z "$BAMFILE" ]; then
+            ## add header info, if spike-in genome is present
             if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {
@@ -99,6 +105,7 @@ if [ -z "$STAR" ]; then
         TOTAL_READS=$(zless $MAPSTATFILE | grep "reads; of these:" | cut -f 1 -d " ")
 
         if [ ! -z "$BAMFILE" ]; then
+            ## add mapping info, if spike-in genome is present
             if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {
@@ -140,6 +147,7 @@ if [ -z "$STAR" ]; then
         ## tabulate mapping statistics (header)
         echo -ne "id\t#reads (for mapping)\t#reads (paired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)"
         if [ ! -z "$BAMFILE" ]; then
+            ## add header info, if spike-in genome is present
             if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {
@@ -169,6 +177,7 @@ if [ -z "$STAR" ]; then
         TOTAL_READS=$(zless $MAPSTATFILE | grep "reads; of these:" | cut -f 1 -d " ")
 
         if [ ! -z "$BAMFILE" ]; then
+            ## add mapping info, if spike-in genome is present
             if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {

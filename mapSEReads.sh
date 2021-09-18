@@ -230,6 +230,14 @@ elif [ "$GENOME" == "hg19_dm6" ]; then
     else
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
+elif [ "$GENOME" == "mm9_dm6" ]; then
+    if [ ! -z "$STAR" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/STAR"
+    elif [ ! -z "$KALLISTO" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/kallisto/"
+    else
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/bowtie2/Bowtie2IndexWithAbundance"
+    fi  
 elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/STAR"
@@ -459,7 +467,8 @@ if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')"
     fi
 
     #if [ -z "$REPEATS" ]; then
-        SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "mapped (" | cut -f 1 -d " " | perl -ane 'printf("%0.6f", 1000000/$_);');
+        SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/${ID}_${GENOME_SPIKEIN}.bam)
+        #SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "mapped (" | cut -f 1 -d " " | perl -ane 'printf("%0.6f", 1000000/$_);');
     #else 
     #    SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam -u);
     #fi
