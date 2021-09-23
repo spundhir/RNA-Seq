@@ -12,14 +12,16 @@ usage() {
 	echo "[Options]"
     echo " -m <file>   [input BAM file containing mapped reads (optional)]"
     echo "             [will be used to compute additional mapping statistics]"
-	echo " -q <file>   [input FASTQ (raw reads) file (optional)]"
-	echo " -f <file>   [input FASTQ (clipped read) file (optional)]"
+	#echo " -q <file>   [input FASTQ (raw reads) file (optional)]"
+	#echo " -f <file>   [input FASTQ (clipped read) file (optional)]"
     echo " -S          [compute mapping statistics for STAR alignment results]"
 	echo " -h          [help]"
     echo "[NOTE]"
     echo "             [mapping statistics are computed using:]"
-    echo "             [1. .mapStat file (from bowtie2) -> id; #reads (for mapping); #reads (paired); #reads (unmapped); #reads (aligned 1 time); #reads (aligned >1 time)]"
-    echo "             [2. samtools idxstats (spike-in only) -> dm6 (mapped); mm9 (mapped)]"
+    echo "             [1. .mapStat from bowtie2 (single-end) -> id; #reads (for mapping); #reads (unpaired); #reads (unmapped); #reads (aligned 1 time); #reads (aligned >1 time); alignment rate]"
+    echo "             [            OR           ]"
+    echo "             [1. .mapStat from bowtie2 (paired-end) -> id; #reads (for mapping); #reads (paired); #reads (unmapped); #reads (aligned 1 time); #reads (aligned >1 time); alignment rate]"
+    echo "             [2. samtools idxstats (spike-in) -> dm6 (mapped); mm9 (mapped)]"
     echo "             [3. samtools flagstat -> #reads (QC-passed); #reads (mapped); #reads (paired); #reads (singleton); #reads (PCR duplicates)]"
 	echo
 	exit 0
@@ -73,10 +75,11 @@ if [ -z "$STAR" ]; then
         ID=$(zless $MAPSTATFILE | grep "Map for" | sed 's/Map for //g' | sed 's/\..*//g')
 
         ## tabulate mapping statistics (header)
-        echo -ne "id\t#reads (raw)\t#reads (after qualityCheck)\t#reads (for mapping)\t#reads (unpaired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
+        #echo -ne "id\t#reads (raw)\t#reads (after qualityCheck)\t#reads (for mapping)\t#reads (unpaired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
+        echo -ne "id\t#reads (for mapping)\t#reads (unpaired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
         if [ ! -z "$BAMFILE" ]; then
             ## add header info, if spike-in genome is present
-            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
+            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | wc -l)" -eq 2 ]; then
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {
                     $F[0]=~s/^.*\_//g; $count{$F[0]}+=$F[2];
@@ -101,12 +104,13 @@ if [ -z "$STAR" ]; then
         echo -ne "$ID"
 
         ## tabulate mapping statistics (values)
-        zless $MAPSTATFILE | perl -ane 'BEGIN { print "\t'$RAW_READS_COUNT'\t'$CLIPPED_READS_COUNT' ('$PER')"; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
+        #zless $MAPSTATFILE | perl -ane 'BEGIN { print "\t'$RAW_READS_COUNT'\t'$CLIPPED_READS_COUNT' ('$PER')"; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
+        zless $MAPSTATFILE | perl -ane 'BEGIN { print "\t"; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
         TOTAL_READS=$(zless $MAPSTATFILE | grep "reads; of these:" | cut -f 1 -d " ")
 
         if [ ! -z "$BAMFILE" ]; then
             ## add mapping info, if spike-in genome is present
-            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
+            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | wc -l)" -eq 2 ]; then
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {
                     $F[0]=~s/^.*\_//g; $count{$F[0]}+=$F[2];
@@ -145,19 +149,19 @@ if [ -z "$STAR" ]; then
         ID=$(zless $MAPSTATFILE | grep "Map for" | sed 's/Map for //g' | sed 's/\..*//g')
 
         ## tabulate mapping statistics (header)
-        echo -ne "id\t#reads (for mapping)\t#reads (paired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)"
+        echo -ne "id\t#reads (for mapping)\t#reads (paired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
         if [ ! -z "$BAMFILE" ]; then
             ## add header info, if spike-in genome is present
-            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
-               samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
-                if($F[0]!~/\*/) {
-                    $F[0]=~s/^.*\_//g; $count{$F[0]}+=$F[2];
-                }
-                END {
-                    foreach(keys(%count)) {
-                        printf("\t%s (mapped)", $_);
+            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | wc -l)" -eq 2 ]; then
+                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
+                    if($F[0]!~/\*/) {
+                        $F[0]=~s/^.*\_//g; $count{$F[0]}+=$F[2];
                     }
-                }'
+                    END {
+                        foreach(keys(%count)) {
+                            printf("\t%s_mapped (proper_pairs)", $_);
+                        }
+                    }'
             fi
 
             echo -ne "\t#reads (QC-passed)\t#reads (mapped)\t#reads (paired)\t#reads (singleton)\t#reads (PCR duplicates)"
@@ -173,20 +177,22 @@ if [ -z "$STAR" ]; then
         echo -ne "$ID"
         
         ## tabulate mapping statistics (values)
-        zless $MAPSTATFILE | perl -ane 'if($_=~/\----/) { last; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
+        cat <(head -n 7 $MAPSTATFILE) <(grep "overall alignment rate" $MAPSTATFILE) | perl -ane 'if($_=~/\----/) { last; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
         TOTAL_READS=$(zless $MAPSTATFILE | grep "reads; of these:" | cut -f 1 -d " ")
 
         if [ ! -z "$BAMFILE" ]; then
             ## add mapping info, if spike-in genome is present
-            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_" | wc -l)" -gt 0 ]; then
+            if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | wc -l)" -eq 2 ]; then
+                FIRST_PER=$(samtools flagstat ${ID}_$(samtools idxstats $BAMFILE | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | head -n 1).bam | perl -ane 'if($_=~/mapped \(/) { $_=~s/\s+.*//g; $mapped=$_/2; } elsif($_=~/properly paired/) { $_=~s/\s+.*//g; $properly_paired=$_/2; } END { $per=sprintf("%0.2f", ($properly_paired*100)/$mapped); print "$properly_paired\t$mapped\t$per\n"; }' | cut -f 3)
+                SECOND_PER=$(samtools flagstat ${ID}_$(samtools idxstats $BAMFILE | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | tail -n 1).bam | perl -ane 'if($_=~/mapped \(/) { $_=~s/\s+.*//g; $mapped=$_/2; } elsif($_=~/properly paired/) { $_=~s/\s+.*//g; $properly_paired=$_/2; } END { $per=sprintf("%0.2f", ($properly_paired*100)/$mapped); print "$properly_paired\t$mapped\t$per\n"; }' | cut -f 3)
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {
                     $F[0]=~s/^.*\_//g; $count{$F[0]}+=$F[2];
                 }
                 END {
-                    foreach(keys(%count)) {
-                        printf("\t%0.0f", $count{$_}/2);
-                    }
+                    @genome=(keys(%count));
+                    printf("\t%0.0f (%s)", $count{$genome[0]}/2, '${FIRST_PER}');
+                    printf("\t%0.0f (%s)", $count{$genome[1]}/2, '${SECOND_PER}');
                 }'
             fi
 
