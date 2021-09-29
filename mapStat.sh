@@ -16,15 +16,17 @@ usage() {
     echo "             [will be used to compute additional mapping statistics]"
 	#echo " -q <file>   [input FASTQ (raw reads) file (optional)]"
 	#echo " -f <file>   [input FASTQ (clipped read) file (optional)]"
+    echo " -N          [also compute signal to noise ratio]"
     echo " -S          [compute mapping statistics for STAR alignment results]"
 	echo " -h          [help]"
     echo "[NOTE]"
     echo "             [mapping statistics are computed using:]"
     echo "             [1. bowtie2 (single-end) -> id; #reads (for mapping); #reads (unpaired); #reads (unmapped); #reads (aligned 1 time); #reads (aligned >1 time); alignment rate]"
-    echo "             [            OR           ]"
+    echo "             [            OR        ]"
     echo "             [1. bowtie2 (paired-end) -> id; #reads (for mapping); #reads (paired); #reads (unmapped); #reads (aligned 1 time); #reads (aligned >1 time); alignment rate]"
-    echo "             [2. samtools idxstats -> mm9_mapped (%proper pairs); dm6_mapped (%proper pairs) (spike-in)]"
-    echo "             [3. samtools flagstat -> #reads (QC-passed); #reads (mapped); #reads (paired); #reads (singleton); #reads (PCR duplicates)]"
+    echo "             [2. samtools idxstats    -> mm9_mapped (%proper pairs); dm6_mapped (%proper pairs) (spike-in)]"
+    echo "             [3. samtools flagstat    -> #reads (QC-passed); #reads (mapped); #reads (paired); #reads (singleton); #reads (PCR duplicates)]"
+    echo "             [4. bam2spikeInScale     -> spikeInScale]"
 	echo
 	exit 0
 }
@@ -32,12 +34,13 @@ usage() {
 MAPPING_FREQUENCY=1
 
 #### parse options ####
-while getopts s:m:q:f:Sh ARG; do
+while getopts s:m:q:f:NSh ARG; do
 	case "$ARG" in
 		s) MAPSTATFILE=$OPTARG;;
         m) BAMFILE=$OPTARG;;
 		q) RAWFASTQFILE=$OPTARG;;
 		f) CLIPPEDFASTQFILE=$OPTARG;;
+        N) SNR=1;;
         S) STAR=1;;
 		h) HELP=1;;
 	esac
@@ -88,7 +91,9 @@ if [ -z "$STAR" ]; then
         ## determine unique id
         ID=$(zless $MAPSTATFILE | grep "Map for" | sed 's/Map for //g' | sed 's/\..*//g')
 
-        ## tabulate mapping statistics (header)
+        ##----------------------------------------##
+        ## tabulate mapping statistics (HEADER - SINGLE-END)
+        ##----------------------------------------##
         #echo -ne "id\t#reads (raw)\t#reads (after qualityCheck)\t#reads (for mapping)\t#reads (unpaired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
         echo -ne "id\t#reads (for mapping)\t#reads (unpaired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
         if [ ! -z "$BAMFILE" ]; then
@@ -106,10 +111,17 @@ if [ -z "$STAR" ]; then
                 echo $(ls $ID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped)"; }'
             fi
         fi
+        
+        ## add spike-in scale
+        if [ "${#GENOME[@]}" -eq 2 ]; then
+            echo -ne "\tspikeInScale"
+        fi
         echo
         echo -ne "$ID"
 
-        ## tabulate mapping statistics (values)
+        ##----------------------------------------##
+        ## tabulate mapping statistics (VALUES - SINGLE-END)
+        ##----------------------------------------##
         #zless $MAPSTATFILE | perl -ane 'BEGIN { print "\t'$RAW_READS_COUNT'\t'$CLIPPED_READS_COUNT' ('$PER')"; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
         zless $MAPSTATFILE | perl -ane 'BEGIN { print "\t"; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
         TOTAL_READS=$(zless $MAPSTATFILE | grep "reads; of these:" | cut -f 1 -d " ")
@@ -142,12 +154,12 @@ if [ -z "$STAR" ]; then
                 }'
 
             ## compute signal to noise ratio
-            if [ "${#GENOME[@]}" -eq 2 ]; then
-                SNR=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} | cut -f 3)
-            else
-                SNR=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} | cut -f 3)
+            if [ "${#GENOME[@]}" -eq 2 -a "$SNR" ]; then
+                SNRatio=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} | cut -f 3)
+            elif [ "$SNR" ]; then
+                SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} | cut -f 3)
             fi
-            echo -ne "\t$SNR"
+            echo -ne "\t$SNRatio"
 
             if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
                 for i in $(ls $BAMID* | grep "_dupRemoved_" | grep "bam$"); do
@@ -161,13 +173,19 @@ if [ -z "$STAR" ]; then
 
             #samtools view -f 4 $BAMFILE  | cut -f 10 | sort | uniq -c | sort -nr > $ID.unmapped;
         fi
+
+        ## add spike-in scale
+        if [ "${#GENOME[@]}" -eq 2 ]; then
+            echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
+        fi
         echo
-    ## compute mapping statistics for paired-end data
     else
         ## determine unique id
         ID=$(zless $MAPSTATFILE | grep "Map for" | sed 's/Map for //g' | sed 's/\..*//g')
 
-        ## tabulate mapping statistics (header)
+        ##----------------------------------------##
+        ## tabulate mapping statistics (HEADER - PAIRED-END)
+        ##----------------------------------------##
         echo -ne "id\t#reads (for mapping)\t#reads (paired)\t#reads (unmapped)\t#reads (aligned 1 time)\t#reads (aligned >1 time)\talignment rate"
         if [ ! -z "$BAMFILE" ]; then
             if [ "${#GENOME[@]}" -eq 2 ]; then
@@ -184,10 +202,17 @@ if [ -z "$STAR" ]; then
                 echo $(ls $BAMID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { print "\tgenome (final mapped)"; }'
             fi
         fi
+
+        ## add spike-in scale
+        if [ "${#GENOME[@]}" -eq 2 ]; then
+            echo -ne "\tspikeInScale"
+        fi
         echo
         echo -ne "$ID"
-        
-        ## tabulate mapping statistics (values)
+       
+        ##----------------------------------------##
+        ## tabulate mapping statistics (VALUES - PAIRED-END)
+        ##----------------------------------------##
         cat <(head -n 7 $MAPSTATFILE) <(grep "overall alignment rate" $MAPSTATFILE) | perl -ane 'if($_=~/\----/) { last; } if($_=~/^[0-9\s]+/) { $_=~s/\;.*//g; chomp($_); $_=~s/\s+[a-zA-Z]+.*//g; print "\t$_"; }'
         TOTAL_READS=$(zless $MAPSTATFILE | grep "reads; of these:" | cut -f 1 -d " ")
 
@@ -225,12 +250,12 @@ if [ -z "$STAR" ]; then
                 }'
 
             ## compute signal to noise ratio
-            if [ "${#GENOME[@]}" -eq 2 ]; then
-                SNR=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} -P | cut -f 3)
-            else
-                SNR=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} -P | cut -f 3)
+            if [ "${#GENOME[@]}" -eq 2 -a "$SNR" ]; then
+                SNRatio=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} -P | cut -f 3)
+            elif [ "$SNR" ]; then
+                SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} -P | cut -f 3)
             fi
-            echo -ne "\t$SNR"
+            echo -ne "\t$SNRatio"
 
             if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
                 for i in $(ls $BAMID* | grep "_dupRemoved_" | grep "bam$"); do
@@ -242,6 +267,11 @@ if [ -z "$STAR" ]; then
                 done
             fi
 
+        fi
+
+        ## add spike-in scale
+        if [ "${#GENOME[@]}" -eq 2 ]; then
+            echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
         fi
         echo
     fi
