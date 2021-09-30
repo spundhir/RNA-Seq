@@ -9,7 +9,8 @@ option_list <- list(
     make_option(c("-n", "--normalized"), help="input file contains normalized read couts", action="store_true"),
     make_option(c("-t", "--treatment"), help="A comma seperated list about description of the data, example: WT,WT,WT,KO,KO,KO (must be equal to the number of samples for which read count is measured in read count file)"),
 	make_option(c("-c", "--condition"), help="A comma seperated list about additonal description of the data, example: T1,T2,T2,T1,T2,T2 (must be equal to the number of samples for which read count is measured in read count file)"),
-    make_option(c("-x", "--noheader"), action="store_true", help="input file do not have header")
+    make_option(c("-x", "--noheader"), action="store_true", help="input file do not have header"),
+    make_option(c("-N", "--outFileName"), help="identifier for output files")
 )
 
 parser <- OptionParser(usage = "%prog [options]", option_list=option_list)
@@ -70,7 +71,7 @@ if(ncol(countTable)!=length(unlist(strsplit(opt$treatment, ","))) | (!is.null(op
   q()
 }
 
-treatment <- unlist(strsplit(opt$treatment, ","))
+treatment <- toupper(unlist(strsplit(opt$treatment, ",")))
 colTable <- as.data.frame(as.factor(treatment), row.names=colnames(countTable))
 colnames(colTable) <- "treatment"
 if(!is.null(opt$condition)) {
@@ -126,7 +127,8 @@ if(is.null(opt$normalized)) {
 #which results tables to construct.
 
 ## modify this line to compare different set of treatments
-if(is.element("KO", treatment)) {
+#if(is.element("KO", treatment)) {
+if(length(grep("ko", treatment, ignore.case = T))>0 & length(grep("wt", treatment, ignore.case = T))>0) {
     res <- results(dds, contrast=c("treatment", "KO", "WT"))
 } else {
     res <- results(dds, contrast=c("treatment", unique(treatment)[2], unique(treatment)[1]))
@@ -142,7 +144,11 @@ resWithCounts <- merge(res, countTable_norm, by=0, all=TRUE)
 resSig <- resWithCounts[which(resWithCounts$padj<as.numeric(opt$pvalue)),]
 
 ## define output file name
-outFile <- unlist(strsplit(opt$countFile, "/"))[length(unlist(strsplit(opt$countFile, "/")))]
+if(is.null(opt$outFileName)) {
+    outFile <- unlist(strsplit(opt$countFile, "/"))[length(unlist(strsplit(opt$countFile, "/")))]
+} else {
+    outFile <- opt$outFileName
+}
 
 ## print results sort by log2foldchange and p-value
 ## all genes
