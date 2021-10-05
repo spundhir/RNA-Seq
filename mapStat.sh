@@ -103,12 +103,17 @@ if [ -z "$STAR" ]; then
                 echo -ne "\t${GENOME['ref']}_mapped"
             fi
 
-            echo -ne "\t#reads (QC-passed)\t#reads (mapped)\t#reads (PCR duplicates)\tSNR"
+            echo -ne "\t#reads (QC-passed)\t#reads (mapped)\t#reads (PCR duplicates)"
+           
+            ## add signal to noise ratio
+            if [ "$SNR" ]; then
+                echo -ne "\tSNR"
+            fi
 
             if [ "$(ls $ID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
-                echo $(ls $ID* | grep "_dupRemoved_" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped)"; }'
+                echo $(ls $ID* | grep "_dupRemoved_" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped, dupRemoved)"; }'
             elif [ "$(ls $ID* | grep "_dupRemoved" | grep "bam$" | wc -l)" -gt 0 ]; then
-                echo $(ls $ID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped)"; }'
+                echo $(ls $ID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped, dupRemoved)"; }'
             fi
         fi
         
@@ -156,10 +161,11 @@ if [ -z "$STAR" ]; then
             ## compute signal to noise ratio
             if [ "${#GENOME[@]}" -eq 2 -a "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} | cut -f 3)
+                echo -ne "\t$SNRatio"
             elif [ "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} | cut -f 3)
+                echo -ne "\t$SNRatio"
             fi
-            echo -ne "\t$SNRatio"
 
             if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
                 for i in $(ls $BAMID* | grep "_dupRemoved_" | grep "bam$"); do
@@ -176,7 +182,11 @@ if [ -z "$STAR" ]; then
 
         ## add spike-in scale
         if [ "${#GENOME[@]}" -eq 2 ]; then
-            echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
+            if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
+                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_dupRemoved_${GENOME[spike]}.bam)"
+            else
+                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
+            fi
         fi
         echo
     else
@@ -194,12 +204,17 @@ if [ -z "$STAR" ]; then
                 echo -ne "\t${GENOME['ref']}_mapped (proper_pairs)"
             fi
 
-            echo -ne "\t#reads (QC-passed)\t#reads (mapped)\t#reads (paired)\t#reads (singleton)\t#reads (PCR duplicates)\tSNR"
+            echo -ne "\t#reads (QC-passed)\t#reads (mapped)\t#reads (paired)\t#reads (singleton)\t#reads (PCR duplicates)"
+
+            ## add signal to noise ratio
+            if [ "$SNR" ]; then
+                echo -ne "\tSNR"
+            fi
 
             if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
-                echo $(ls $BAMID* | grep "_dupRemoved_" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped)"; }'
+                echo $(ls $BAMID* | grep "_dupRemoved_" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped, dupRemoved)"; }'
             elif [ "$(ls $BAMID* | grep "_dupRemoved" | grep "bam$" | wc -l)" -gt 0 ]; then
-                echo $(ls $BAMID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { print "\tgenome (final mapped)"; }'
+                echo $(ls $BAMID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { print "\tgenome (final mapped, dupRemoved)"; }'
             fi
         fi
 
@@ -252,10 +267,11 @@ if [ -z "$STAR" ]; then
             ## compute signal to noise ratio
             if [ "${#GENOME[@]}" -eq 2 -a "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} -P | cut -f 3)
+                echo -ne "\t$SNRatio"
             elif [ "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} -P | cut -f 3)
+                echo -ne "\t$SNRatio"
             fi
-            echo -ne "\t$SNRatio"
 
             if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
                 for i in $(ls $BAMID* | grep "_dupRemoved_" | grep "bam$"); do
@@ -271,7 +287,11 @@ if [ -z "$STAR" ]; then
 
         ## add spike-in scale
         if [ "${#GENOME[@]}" -eq 2 ]; then
-            echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
+            if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
+                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_dupRemoved_${GENOME[spike]}.bam)"
+            else
+                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
+            fi
         fi
         echo
     fi
