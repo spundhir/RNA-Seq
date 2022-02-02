@@ -43,6 +43,12 @@ if(is.null(opt$tab)) {
     }
 }
 
+## check, if gene names are in rownames
+if(is.numeric(data[,1])) {
+    data <- as.data.frame(cbind(row.names(data), data))
+    colnames(data)[1] <- "gene"
+}
+
 data[,1] <- gsub("\\..*", "", data[,1])
 
 ################################################
