@@ -112,8 +112,10 @@ if [ -z "$STAR" ]; then
 
             if [ "$(ls $ID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
                 echo $(ls $ID* | grep "_dupRemoved_" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped, dupRemoved)"; }'
+                BAMID="${BAMID}_dupRemoved"
             elif [ "$(ls $ID* | grep "_dupRemoved" | grep "bam$" | wc -l)" -gt 0 ]; then
                 echo $(ls $ID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped, dupRemoved)"; }'
+                BAMID="${BAMID}_dupRemoved"
             fi
         fi
         
@@ -182,11 +184,7 @@ if [ -z "$STAR" ]; then
 
         ## add spike-in scale
         if [ "${#GENOME[@]}" -eq 2 ]; then
-            if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
-                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_dupRemoved_${GENOME[spike]}.bam)"
-            else
-                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
-            fi
+            echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
         fi
         echo
     else
@@ -213,8 +211,10 @@ if [ -z "$STAR" ]; then
 
             if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
                 echo $(ls $BAMID* | grep "_dupRemoved_" | grep "bam$") | perl -ane 'foreach(@F) { $_=~s/^.*\_//g; $_=~s/\..*//g; print "\t$_ (final mapped, dupRemoved)"; }'
+                BAMID="${BAMID}_dupRemoved"
             elif [ "$(ls $BAMID* | grep "_dupRemoved" | grep "bam$" | wc -l)" -gt 0 ]; then
                 echo $(ls $BAMID* | grep "_dupRemoved" | grep "bam$") | perl -ane 'foreach(@F) { print "\tgenome (final mapped, dupRemoved)"; }'
+                BAMID="${BAMID}_dupRemoved"
             fi
         fi
 
@@ -224,7 +224,7 @@ if [ -z "$STAR" ]; then
         fi
         echo
         echo -ne "$ID"
-       
+
         ##----------------------------------------##
         ## tabulate mapping statistics (VALUES - PAIRED-END)
         ##----------------------------------------##
@@ -287,11 +287,7 @@ if [ -z "$STAR" ]; then
 
         ## add spike-in scale
         if [ "${#GENOME[@]}" -eq 2 ]; then
-            if [ "$(ls $BAMID* | grep "_dupRemoved_" | grep "bam$" | wc -l)" -gt 0 ]; then
-                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_dupRemoved_${GENOME[spike]}.bam)"
-            else
-                echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
-            fi
+            echo -ne "\t$(bam2spikeInScale -i ${BAMID}_${GENOME[spike]}.bam)"
         fi
         echo
     fi
