@@ -132,9 +132,6 @@ fi
 
 ## create appropriate directory structure
 echo -n "Create appropriate directory structure... "
-if [ ! -d "$MAPDIR" ]; then
-    mkdir $MAPDIR
-fi
 if [ ! -z "$COPYDIR" ]; then
     echo -n "Copying fastq file(s) to $COPYDIR... "
     mkdir -p $COPYDIR
@@ -170,6 +167,9 @@ if [ ! -z "$COPYDIR" ]; then
     done
     FASTQ_REVERSE=$(echo $FASTQ_REVERSE | perl -ane '$_=~s/^\,//g; print $_;')
     MAPDIR=$COPYDIR
+fi
+if [ ! -d "$MAPDIR" ]; then
+    mkdir $MAPDIR
 fi
 #echo "$FASTQ_FORWARD"; echo "$FASTQ_REVERSE"; exit
 echo done
