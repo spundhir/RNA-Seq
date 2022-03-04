@@ -23,7 +23,7 @@ usage() {
 	echo "[OPTIONS]"
 	echo " -m <dir>    [output directory to store mapped reads (default: .)]"
 	echo " -g <string> [genome (default: mm9)]"
-    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38]"
+    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, ce11_dm6, ce11_mm10]"
     echo "             [**NOTE**: cases like mm9_hg19: assembly post '_' is considered spikeIn (hg19)]"
     echo " -p <int>    [number of processors (default: 1)]"
     echo "             [for STAR, keep it max to 20]"
@@ -254,6 +254,20 @@ elif [ "$GENOME" == "hg38_mm10" -o "$GENOME" == "mm10_hg38" ]; then
     else
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg38_mm10/bowtie2/Bowtie2IndexWithAbundance"
     fi
+elif [ "$GENOME" == "ce11_dm6" ]; then
+    if [ ! -z "$STAR" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/STAR"
+    elif [ ! -z "$KALLISTO" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/kallisto/"
+    else
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/bowtie2/Bowtie2IndexWithAbundance"
+elif [ "$GENOME" == "ce11_mm10" ]; then
+    if [ ! -z "$STAR" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/STAR"
+    elif [ ! -z "$KALLISTO" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/kallisto/"
+    else
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/bowtie2/Bowtie2IndexWithAbundance"
 elif [ "$GENOME" == "ecoli" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/STAR"
@@ -263,7 +277,7 @@ elif [ "$GENOME" == "ecoli" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/bowtie2/Bowtie2IndexWithAbundance"
     fi
 else
-    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38"
+    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, ce11_dm6, ce11_mm10"
     echo
     usage
 fi
