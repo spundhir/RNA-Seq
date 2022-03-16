@@ -272,6 +272,7 @@ elif [ "$GENOME" == "ce11_dm6" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/kallisto/"
     else
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/bowtie2/Bowtie2IndexWithAbundance"
+    fi
 elif [ "$GENOME" == "ce11_mm10" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/STAR"
@@ -279,6 +280,7 @@ elif [ "$GENOME" == "ce11_mm10" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/kallisto/"
     else
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/bowtie2/Bowtie2IndexWithAbundance"
+    fi
 elif [ "$GENOME" == "ecoli" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/STAR"
