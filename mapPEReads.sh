@@ -365,32 +365,51 @@ fi
 
 ## start analysis
 if [ ! -z "$STAR" ]; then
-    if [ -z "$REPEATS" ]; then
-        echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS" >> $MAPDIR/$ID.mapStat
+    if [ -z "$BAMTOBW" ]; then
+        if [ -z "$REPEATS" ]; then
+            echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS" >> $MAPDIR/$ID.mapStat
 
-        STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS
-    else
-        echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded --outFilterMultimapNmax 10000 --winAnchorMultimapNmax 10000 --outSAMmultNmax 1 --alignTranscriptsPerReadNmax 15000 $ARGS" >> $MAPDIR/$ID.mapStat
+            STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS
+        else
+            echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded --outFilterMultimapNmax 10000 --winAnchorMultimapNmax 10000 --outSAMmultNmax 1 --alignTranscriptsPerReadNmax 15000 $ARGS" >> $MAPDIR/$ID.mapStat
 
-        STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded --outFilterMultimapNmax 10000 --winAnchorMultimapNmax 10000 --outSAMmultNmax 1 --alignTranscriptsPerReadNmax 15000 $ARGS
-    fi
+            STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded --outFilterMultimapNmax 10000 --winAnchorMultimapNmax 10000 --outSAMmultNmax 1 --alignTranscriptsPerReadNmax 15000 $ARGS
+        fi
 
-    mv $MAPDIR/$ID"Aligned.sortedByCoord.out.bam" $MAPDIR/$ID.bam
-    zless $MAPDIR/$ID"Log.final.out" >> $MAPDIR/$ID.mapStat
-    zless $MAPDIR/$ID"Log.progress.out" >> $MAPDIR/$ID.mapStat
-    zless $MAPDIR/$ID"Log.out" > $MAPDIR/$ID.log
-    zless $MAPDIR/$ID"SJ.out.tab" > $MAPDIR/$ID.SJ
-    samtools index $MAPDIR/$ID.bam
-    rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
+        mv $MAPDIR/$ID"Aligned.sortedByCoord.out.bam" $MAPDIR/$ID.bam
+        zless $MAPDIR/$ID"Log.final.out" >> $MAPDIR/$ID.mapStat
+        zless $MAPDIR/$ID"Log.progress.out" >> $MAPDIR/$ID.mapStat
+        zless $MAPDIR/$ID"Log.out" > $MAPDIR/$ID.log
+        zless $MAPDIR/$ID"SJ.out.tab" > $MAPDIR/$ID.SJ
+        samtools index $MAPDIR/$ID.bam
+        rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
 
-    # ls *.bg | parallel -j 1 'sort -k 1,1 -k 2n,2 {} > {.}.sort'
-    # ls *.sort | parallel -j 1 'bedGraphToBigWig {} /scratch/genomes/annotations/SIZE/mouse.mm9.genome bigWig/{.}.bw' &
-    if [ ! -z "$UNIQUE" ]; then
-        mv $MAPDIR/$ID"Signal.Unique.str1.out.bg" $MAPDIR/$ID.bg
-        rm $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg"
-    else
-        mv $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" $MAPDIR/$ID.bg
+        ## create bigwig files for visualization at the UCSC genome browser
+        # ls *.bg | parallel -j 1 'sort -k 1,1 -k 2n,2 {} > {.}.sort'
+        # ls *.sort | parallel -j 1 'bedGraphToBigWig {} /scratch/genomes/annotations/SIZE/mouse.mm9.genome bigWig/{.}.bw' &
+        if [ ! -z "$UNIQUE" ]; then
+            sortBed -i $MAPDIR/$ID"Signal.Unique.str1.out.bg" > $MAPDIR/$ID.bg
+        else
+            sortBed -i $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" > $MAPDIR/$ID.bg
+        fi
         rm $MAPDIR/$ID"Signal.Unique.str1.out.bg"
+        rm $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg"
+
+        ## populating files based on input genome
+        if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
+            GENOME=$(echo $GENOME | sed 's/\_.*//g')
+        fi
+        GENOME_FILE=$(initialize_genome -i $FINDNFRPATH/data/annotations/GENOME_FILE -g $GENOME)
+        if [ ! -f "$GENOME_FILE" ]; then
+            echo
+            echo "computation for $GENOME is not feasible yet"
+            echo "please add the chromosome size file for $GENOME at $FINDNFRPATH/data/annotations"
+            echo "also update the $FINDNFRPATH/data/annotations/GENOME_FILE"
+            echo
+            usage
+        fi
+
+        bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
     fi
 elif [ ! -z "$KALLISTO" ]; then
     echo "Map for $ID... "

@@ -411,13 +411,30 @@ if [ ! -z "$STAR" ]; then
         samtools index $MAPDIR/$ID.bam
         rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
 
+        ## create bigwig files for visualization at the UCSC genome browser
         if [ ! -z "$UNIQUE" ]; then
-            mv $MAPDIR/$ID"Signal.Unique.str1.out.bg" $MAPDIR/$ID.bg
-            rm $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" 
+            sortBed -i $MAPDIR/$ID"Signal.Unique.str1.out.bg" > $MAPDIR/$ID.bg
         else
-            mv $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" $MAPDIR/$ID.bg
-            rm $MAPDIR/$ID"Signal.Unique.str1.out.bg"
+            sortBed -i $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg" > $MAPDIR/$ID.bg
         fi
+        rm $MAPDIR/$ID"Signal.Unique.str1.out.bg"
+        rm $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg"
+
+        ## populating files based on input genome
+        if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
+            GENOME=$(echo $GENOME | sed 's/\_.*//g')
+        fi
+        GENOME_FILE=$(initialize_genome -i $FINDNFRPATH/data/annotations/GENOME_FILE -g $GENOME)
+        if [ ! -f "$GENOME_FILE" ]; then
+            echo
+            echo "computation for $GENOME is not feasible yet"
+            echo "please add the chromosome size file for $GENOME at $FINDNFRPATH/data/annotations"
+            echo "also update the $FINDNFRPATH/data/annotations/GENOME_FILE"
+            echo
+            usage
+        fi
+        
+        bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
     fi
 elif [ ! -z "$KALLISTO" ]; then
     if [ -z "$BAMTOBW" ]; then
