@@ -193,11 +193,17 @@ pdf(sprintf("%s/%s.pca.pdf", opt$outDir, outFile))
 if(!is.null(opt$condition)) {
     data <- plotPCA(rld, intgroup=c("treatment", "condition"), returnData=T)
     percentVar <- round(100 * attr(data, "percentVar"))
-    ggplot(data, aes(PC1, PC2, color=treatment, shape=condition)) + geom_point(size=3) + xlab(paste0("PC1: ",percentVar[1],"% variance")) + ylab(paste0("PC2: ",percentVar[2],"% variance"))
+    ggplot(data, aes(PC1, PC2, color=treatment, shape=condition, label=row.names(data))) + geom_point(size=3) + 
+        xlab(paste0("PC1: ",percentVar[1],"% variance")) + 
+        ylab(paste0("PC2: ",percentVar[2],"% variance")) +
+        geom_text(data = data, size=4, color="#000000") + theme_bw()
 } else {
     data <- plotPCA(rld, intgroup="treatment", returnData=T)
     percentVar <- round(100 * attr(data, "percentVar"))
-    ggplot(data, aes(PC1, PC2, color=treatment)) + geom_point(size=3) + xlab(paste0("PC1: ",percentVar[1],"% variance")) + ylab(paste0("PC2: ",percentVar[2],"% variance"))
+    ggplot(data, aes(PC1, PC2, color=treatment, label=row.names(data))) + geom_point(size=3) + 
+        xlab(paste0("PC1: ",percentVar[1],"% variance")) + 
+        ylab(paste0("PC2: ",percentVar[2],"% variance")) +
+        geom_text(data = data, size=4, color="#000000") + theme_bw()
 }
 
 dev.off()
