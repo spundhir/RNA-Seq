@@ -15,7 +15,7 @@ opt <- parse_args(parser)
 
 ## check, if all required arguments are given
 if(is.null(opt$inFile)) {
-	cat("\nProgram: convertId.R (R script to convert Ids using BioMart)\n")
+	cat("\nProgram: convertId.R (R script to convert Ids (ensembl id -> gene id) using BioMart)\n")
 	cat("Author: BRIC, University of Copenhagen, Denmark\n")
 	cat("Version: 1.0\n")
 	cat("Contact: pundhir@binf.ku.dk\n");
