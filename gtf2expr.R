@@ -98,7 +98,7 @@ if(is.null(opt$repeats)) {
     coor[which(coor$strand=="1"),]$strand <- "+"
     coor[which(coor$strand=="-1"),]$strand <- "-"
     coor$score <- 0
-    result <- merge(coor, all, by.x="external_gene_name", by.y="GeneID")
+    result <- merge(coor, all, by.x="external_gene_name", by.y="GeneID", all.y=T)
     result <- result[,c(c("chromosome_name", "start_position", "end_position", "external_gene_name", "score", "strand", "Length", "Copies"), colnames(result)[9:ncol(result)])]
 
     ## select highest expressed version of multiple copies of a gene (for example: CKS1B in hg19)
