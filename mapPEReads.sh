@@ -249,6 +249,14 @@ elif [ "$GENOME" == "mm9_dm6" ]; then
     else
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
+elif [ "$GENOME" == "mm10_dm6" ]; then
+    if [ ! -z "$STAR" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm10_dm6/STAR"
+    elif [ ! -z "$KALLISTO" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm10_dm6/kallisto/"
+    else
+        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm10_dm6/bowtie2/Bowtie2IndexWithAbundance"
+    fi
 elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/STAR"
@@ -290,7 +298,7 @@ elif [ "$GENOME" == "ecoli" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/bowtie2/Bowtie2IndexWithAbundance"
     fi  
 else
-    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, mm9_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, ce11_dm6, ce11_mm10"
+    echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, mm9_dm6, mm10_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, ce11_dm6, ce11_mm10"
 echo
 usage
 fi
