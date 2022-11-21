@@ -64,7 +64,9 @@ if(opt$genome=="hg19") {
     mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
 } else if(opt$genome=="mm10") {
     mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
-} else {
+} else if(opt$genome=="dm6") {
+    mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "dmelanogaster_gene_ensembl")
+} else if(opt$genome!="ercc") {
     cat("Unknown genome provided\n");
     print_help(parser)
     q() 
