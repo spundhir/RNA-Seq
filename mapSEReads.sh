@@ -427,14 +427,13 @@ if [ ! -z "$STAR" ]; then
         GENOME_FILE=$(initialize_genome -i $FINDNFRPATH/data/annotations/GENOME_FILE -g $GENOME)
         if [ ! -f "$GENOME_FILE" ]; then
             echo
-            echo "computation for $GENOME is not feasible yet"
+            echo "computation create bigWig file for $GENOME"
             echo "please add the chromosome size file for $GENOME at $FINDNFRPATH/data/annotations"
             echo "also update the $FINDNFRPATH/data/annotations/GENOME_FILE"
             echo
-            usage
+        else
+            bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
         fi
-        
-        bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
     fi
 elif [ ! -z "$KALLISTO" ]; then
     if [ -z "$BAMTOBW" ]; then

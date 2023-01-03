@@ -300,7 +300,7 @@ elif [ "$GENOME" == "ecoli" ]; then
 else
     echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, mm9_dm6, mm10_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, ce11_dm6, ce11_mm10"
 echo
-usage
+    usage
 fi
 echo done
 
@@ -410,14 +410,14 @@ if [ ! -z "$STAR" ]; then
         GENOME_FILE=$(initialize_genome -i $FINDNFRPATH/data/annotations/GENOME_FILE -g $GENOME)
         if [ ! -f "$GENOME_FILE" ]; then
             echo
-            echo "computation for $GENOME is not feasible yet"
+            echo "Cannot create bigWig file for $GENOME"
             echo "please add the chromosome size file for $GENOME at $FINDNFRPATH/data/annotations"
             echo "also update the $FINDNFRPATH/data/annotations/GENOME_FILE"
             echo
-            usage
+        else
+            bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
         fi
 
-        bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
     fi
 elif [ ! -z "$KALLISTO" ]; then
     echo "Map for $ID... "
