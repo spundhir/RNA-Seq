@@ -416,6 +416,7 @@ if [ ! -z "$STAR" ]; then
             echo
         else
             bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
+            rm $MAPDIR/$ID.bg
         fi
 
     fi
