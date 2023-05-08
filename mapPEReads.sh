@@ -313,6 +313,7 @@ fi
 
 ## trim adapter sequences
 if [ "$TRIM_ADAPTERS" ]; then
+    echo -n "Trim adapter sequences (`date`).. "
     FASTQDIR=$(dirname $FASTQ_FORWARD})
     FASTQFOWARDFILE=$(basename $FASTQ_FORWARD} | sed -E 's/\..*//g')
     FASTQREVERSEFILE=$(basename $FASTQ_REVERSE} | sed -E 's/\..*//g')
@@ -321,7 +322,9 @@ if [ "$TRIM_ADAPTERS" ]; then
     fi
     FASTQ_FORWARD="${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz"
     FASTQ_REVERSE="${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz"
+    echo done
 fi
+#echo "$FASTQ_FORWARD"; echo "$FASTQ_REVERSE"; exit
 
 ## read arguments
 ARGS=""
