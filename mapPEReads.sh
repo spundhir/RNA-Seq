@@ -34,6 +34,7 @@ usage() {
     echo " -d <string> [identifier for output BAM file (default: same as fastq file)]"
     echo " -y <dir>    [copy input fastq file(s) to specified directory for mapping]"
     echo "             [useful when working on mounted directory]" 
+    echo " -a          [trim adapters]"
     echo "[OPTIONS: bowtie2 (ChIP- or RNA-seq) (default)]"
     echo " -u          [report only uniquely mapped reads]"
     echo " -U          [remove PCR duplicate reads from output bam file (samtools markdup)]"
@@ -86,7 +87,7 @@ usage() {
 }
 
 #### parse options ####
-while getopts i:j:m:g:p:d:y:uUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrSKT:N:h ARG; do
+while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrSKT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ_FORWARD=$OPTARG;;
 		j) FASTQ_REVERSE=$OPTARG;;
@@ -95,6 +96,7 @@ while getopts i:j:m:g:p:d:y:uUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrSKT:N:h ARG; do
         p) PROCESSORS=$OPTARG;;
         d) ID=$OPTARG;;
         y) COPYDIR=$OPTARG;;
+        a) TRIM_ADAPTERS=1;;
         u) UNIQUE=1;;
         U) REMOVE_DUPLICATE=1;;
         c) SCALE=1;;
@@ -307,6 +309,18 @@ echo done
 ## retrieve file name
 if [ -z "$ID" ]; then
     ID=`echo $FASTQ_FORWARD | perl -an -F'/\,/' -e '$ID=(); foreach(@F) { $_=~s/^.+\///g; $_=~s/\..+$//g; chomp($_); $ID.=$_."_"; } $ID=~s/\_$//g; print "$ID\n";' | perl -an -F'//' -e 'chomp($_); $_=~s/\_R[0-9]+.*$//g; print "$_\n";'`;
+fi
+
+## trim adapter sequences
+if [ "$TRIM_ADAPTERS" ]; then
+    FASTQDIR=$(dirname $FASTQ_FORWARD})
+    FASTQFOWARDFILE=$(basename $FASTQ_FORWARD} | sed -E 's/\..*//g')
+    FASTQREVERSEFILE=$(basename $FASTQ_REVERSE} | sed -E 's/\..*//g')
+    if [ ! -s "${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz" -o ! -s "${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz" ]; then
+        trimmomatic PE ${FASTQ_FORWARD} ${FASTQ_REVERSE} ${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz ${FASTQDIR}/${FASTQFOWARDFILE}_trimmed_unpaired.fastq.gz ${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz ${FASTQDIR}/${FASTQREVERSEFILE}_trimmed_unpaired.fastq.gz ILLUMINACLIP:/localhome/bric/xfd783/software/Trimmomatic/adapters/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+    fi
+    FASTQ_FORWARD="${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz"
+    FASTQ_REVERSE="${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz"
 fi
 
 ## read arguments
