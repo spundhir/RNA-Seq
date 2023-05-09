@@ -196,7 +196,7 @@ elif [ "$GENOME" == "mm10" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$BWA" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bwa/"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bwa/mm10.fa"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -457,7 +457,8 @@ else
             ## command check
             echo "Command used: bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS" >>$MAPDIR/$ID.mapStat
 
-            bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam 
+            #bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS 2>>/dev/null | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+            samtools flagstat  $MAPDIR/$ID.bam >>$MAPDIR/$ID.mapStat
         else
             if [ -z "$REPEATS" ]; then
                 ## command check
