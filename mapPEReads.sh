@@ -413,7 +413,7 @@ if [ ! -z "$STAR" ]; then
         zless $MAPDIR/$ID"Log.progress.out" >> $MAPDIR/$ID.mapStat
         zless $MAPDIR/$ID"Log.out" > $MAPDIR/$ID.log
         zless $MAPDIR/$ID"SJ.out.tab" > $MAPDIR/$ID.SJ
-        samtools index $MAPDIR/$ID.bam
+        samtools index -@ $PROCESSORS $MAPDIR/$ID.bam
         rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
 
         ## create bigwig files for visualization at the UCSC genome browser
@@ -453,17 +453,17 @@ else
             ## command check
             echo "Command used: bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS" >>$MAPDIR/$ID.mapStat
 
-            bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS 2>>/dev/null | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
-            samtools flagstat  $MAPDIR/$ID.bam >>$MAPDIR/$ID.mapStat
+            bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS 2>>/dev/null | samtools view -@ $PROCESSORS -S -b - | samtools sort -@ $PROCESSORS -n -m 1500M - | samtools fixmate -@ $PROCESSORS -m - $MAPDIR/$ID.bam
+            samtools flagstat -@ $PROCESSORS $MAPDIR/$ID.bam >>$MAPDIR/$ID.mapStat
         else
             if [ -z "$REPEATS" ]; then
                 ## command check
                 echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS" >>$MAPDIR/$ID.mapStat
 
                 if [ ! -z "$UNIQUE" ]; then
-                    bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+                    bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -@ $PROCESSORS -S -b - | samtools sort -@ $PROCESSORS -n -m 1500M - | samtools fixmate -@ $PROCESSORS -m - $MAPDIR/$ID.bam
                 else
-                    bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+                    bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -@ $PROCESSORS -S -b - | samtools sort -@ $PROCESSORS -n -m 1500M - | samtools fixmate -@ $PROCESSORS -m - $MAPDIR/$ID.bam
                 fi
      
                 #alignment (options...) \
@@ -477,24 +477,24 @@ else
                 #bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 --no-mixed 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
                 ## limited use, no NH: tag information
                 echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS" >>$MAPDIR/$ID.mapStat
-                bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+                bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -@ $PROCESSORS -S -b - | samtools sort -@ $PROCESSORS -n -m 1500M - | samtools fixmate -@ $PROCESSORS -m - $MAPDIR/$ID.bam
             fi
         fi
 
         TMP=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
-        samtools sort $MAPDIR/$ID.bam | samtools markdup - $MAPDIR/$ID"_"$TMP.bam
+        samtools sort -@ $PROCESSORS $MAPDIR/$ID.bam | samtools markdup -@ $PROCESSORS - $MAPDIR/$ID"_"$TMP.bam
         mv $MAPDIR/$ID"_"$TMP.bam $MAPDIR/$ID.bam
 
         ## remove PCR duplicate reads (important for ChIP-seq data)
         if [ ! -z "$REMOVE_DUPLICATE" ]; then
-            samtools markdup -r $MAPDIR/$ID.bam $MAPDIR/$ID"_dupRemoved".bam
+            samtools markdup -@ $PROCESSORS -r $MAPDIR/$ID.bam $MAPDIR/$ID"_dupRemoved".bam
             ID=$(echo $ID"_dupRemoved")
         fi
 
         ## compute mapping statistics
         ## idxstat format: The output is TAB delimited with each line consisting of reference sequence name, sequence length, # mapped reads and # unmapped reads. 
         #samtools index $MAPDIR/$ID.bam && samtools idxstats $MAPDIR/$ID.bam > $MAPDIR/$ID.MappingStatistics.txt && perl -ane 'print "$F[0]\t$F[2]\t'$ID'\n";' $MAPDIR/$ID.MappingStatistics.txt >> $MAPDIR/concatenated_accepted_MappingStatistics.txt
-        samtools index $MAPDIR/$ID.bam
+        samtools index -@ $PROCESSORS $MAPDIR/$ID.bam
     else
         if [ ! -z "$REMOVE_DUPLICATE" ]; then
             ID=$(echo $ID"_dupRemoved")
@@ -507,25 +507,25 @@ COMMENT
     if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
         GENOME_SPIKEIN=$(echo $GENOME | sed 's/.*\_//g')
 
-        CHROM=$(samtools view -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME_SPIKEIN | perl -ane 'chomp($_); print "$_ ";');
+        CHROM=$(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME_SPIKEIN | perl -ane 'chomp($_); print "$_ ";');
         #echo "$GENOME_SPIKEIN $CHROM"; exit
 
         if [ -z "$BAMTOBW" ]; then
             ## samtools view misses a lot of read in the output as happened in MLL-AF9 project
             #samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
-            cat <(samtools view -H $MAPDIR/$ID.bam) <(samtools view -S $MAPDIR/$ID.bam | grep "_${GENOME_SPIKEIN}") | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
+            cat <(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam) <(samtools view -@ $PROCESSORS -S $MAPDIR/$ID.bam | grep "_${GENOME_SPIKEIN}") | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -@ $PROCESSORS -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
         fi
 
         GENOME=$(echo $GENOME | sed 's/\_.*//g')
 
-        CHROM=$(samtools view -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME | perl -ane 'chomp($_); print "$_ ";');
+        CHROM=$(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME | perl -ane 'chomp($_); print "$_ ";');
 
         if [ -z "$BAMTOBW" ]; then
             ## samtools view misses a lot of read in the output as happened in MLL-AF9 project
             #samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME.bam
-            cat <(samtools view -H $MAPDIR/$ID.bam) <(samtools view -S $MAPDIR/$ID.bam | grep "_${GENOME}") | sed 's/_'$GENOME'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME.bam
+            cat <(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam) <(samtools view -@ $PROCESSORS -S $MAPDIR/$ID.bam | grep "_${GENOME}") | sed 's/_'$GENOME'//g' | samtools view -@ $PROCESSORS -b - > $MAPDIR/$ID"_"$GENOME.bam
 
-            samtools index $MAPDIR/$ID"_"$GENOME.bam
+            samtools index -@ $PROCESSORS $MAPDIR/$ID"_"$GENOME.bam
         fi
 
         SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/${ID}_${GENOME_SPIKEIN}.bam)
