@@ -183,8 +183,6 @@ echo -n "Populating files based on input genome, $GENOME (`date`).. "
 if [ "$GENOME" == "mm9" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie/Bowtie2IndexWithAbundance"
-    elif [ ! -z "$BWA" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/bwa/"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -207,8 +205,6 @@ elif [ "$GENOME" == "mm10" ]; then
 elif [ "$GENOME" == "hg19" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie/genome_and_Abundant"
-    elif [ ! -z "$BWA" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/bwa/"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/STAR/"
     elif [ ! -z "$KALLISTO" ]; then

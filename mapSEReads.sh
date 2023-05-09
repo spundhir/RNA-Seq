@@ -54,6 +54,8 @@ usage() {
     echo " -Y          [no bam to bw coversion]"
     echo " -r          [map reads for repeat analysis (-u option is ignored)]"
     echo " -H          [map reads for HiC data analysis (--reorder --local)]"
+    echo "[OPTIONS: bwa]"
+    echo " -B          [perform alignment using bwa]"
     echo "[OPTIONS: STAR (RNA-seq)]"
     echo " -S          [perform alignment accommodating for splice junctions using STAR]"
     echo " -u          [report only uniquely mapped reads]"
@@ -82,7 +84,7 @@ usage() {
 }
 
 #### parse options ####
-while getopts i:m:g:p:d:a:y:uUcCek:q:lf:t:L:I:D:E:z:ZYrHSKT:N:h ARG; do
+while getopts i:m:g:p:d:a:y:uUcCek:q:lf:t:L:I:D:E:z:ZYrHBSKT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ=$OPTARG;;
 		m) MAPDIR=$OPTARG;;
@@ -110,6 +112,7 @@ while getopts i:m:g:p:d:a:y:uUcCek:q:lf:t:L:I:D:E:z:ZYrHSKT:N:h ARG; do
         Y) NOBAMTOBW=1;;
         r) REPEATS=1;;
         H) HIC=1;;
+        B) BWA=1;;
         S) STAR=1;;
         K) KALLISTO=1;;
         T) KALLISTO_FL=$OPTARG;;
@@ -177,6 +180,8 @@ if [ "$GENOME" == "mm9" ]; then
 elif [ "$GENOME" == "mm10" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
+    elif [ ! -z "$BWA" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/BWA/mm10.fa"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -197,6 +202,8 @@ elif [ "$GENOME" == "hg19" ]; then
 elif [ "$GENOME" == "hg38" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
+    elif [ ! -z "$BWA" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/bwa/hg38.fa.chr"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -450,22 +457,30 @@ else
     if [ -z "$BAMTOBW" ]; then
         echo "Map for $ID... " >$MAPDIR/$ID.mapStat
 
-        if [ -z "$REPEATS" ]; then
+        if [ ! -z "$BWA" ]; then
             ## command check
-            echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS" >>$MAPDIR/$ID.mapStat
+            echo "Command used: bwa mem $GENOMEINDEX $FASTQ -t $PROCESSORS" >>$MAPDIR/$ID.mapStat
 
-            if [ ! -z "$UNIQUE" ]; then
-                zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+            bwa mem $GENOMEINDEX $FASTQ -t $PROCESSORS 2>>/dev/null | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+            samtools flagstat  $MAPDIR/$ID.bam >>$MAPDIR/$ID.mapStat
+        else
+            if [ -z "$REPEATS" ]; then
+                ## command check
+                echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS" >>$MAPDIR/$ID.mapStat
+
+                if [ ! -z "$UNIQUE" ]; then
+                    zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+                else
+                    zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+                fi
             else
+                ## computationally not feasible
+                #echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000" >>$MAPDIR/$ID.mapStat
+                #zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
+                ## limited use, no NH: tag information
+                echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS" >>$MAPDIR/$ID.mapStat
                 zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
             fi
-        else
-            ## computationally not feasible
-            #echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000" >>$MAPDIR/$ID.mapStat
-            #zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
-            ## limited use, no NH: tag information
-            echo "Command used: zless $FASTQ | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS" >>$MAPDIR/$ID.mapStat
-            zless $FASTQ | sed 's/.*Hendrich.*\@/@/g' | bowtie2 -p $PROCESSORS -x $GENOMEINDEX -U - $ALNMODE -5 $TRIM5 -3 $TRIM3 $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -m 1500M - | samtools markdup - $MAPDIR/$ID.bam
         fi
 
         ## remove PCR duplicate reads (important for ChIP-seq data)
