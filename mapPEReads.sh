@@ -453,7 +453,7 @@ else
             ## command check
             echo "Command used: bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS" >>$MAPDIR/$ID.mapStat
 
-            #bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS 2>>/dev/null | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+            bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS 2>>/dev/null | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
             samtools flagstat  $MAPDIR/$ID.bam >>$MAPDIR/$ID.mapStat
         else
             if [ -z "$REPEATS" ]; then
