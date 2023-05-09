@@ -59,6 +59,8 @@ usage() {
     echo " -P          [suppress SAM records for unaligned reads (--no-unal)]"
     echo " -Z          [only bam to bw coversion; bam file exists]"
     echo " -r          [map reads for repeat analysis (-u option is ignored)]"
+    echo "[OPTIONS: bwa]"
+    echo " -B          [perform alignment using bwa]" 
     echo "[OPTIONS: STAR (RNA-seq)]"
     echo " -S          [perform alignment accommodating for splice junctions using STAR]"
     echo " -u          [report only uniquely mapped reads]"
@@ -87,7 +89,7 @@ usage() {
 }
 
 #### parse options ####
-while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrSKT:N:h ARG; do
+while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrBSKT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ_FORWARD=$OPTARG;;
 		j) FASTQ_REVERSE=$OPTARG;;
@@ -119,6 +121,7 @@ while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrSKT:N:h ARG; do
         P) NO_UNAL=1;;
         Z) BAMTOBW=1;;
         r) REPEATS=1;;
+        B) BWA=1;;
         S) STAR=1;;
         K) KALLISTO=1;;
         T) KALLISTO_FL=$OPTARG;;
@@ -180,6 +183,8 @@ echo -n "Populating files based on input genome, $GENOME (`date`).. "
 if [ "$GENOME" == "mm9" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie/Bowtie2IndexWithAbundance"
+    elif [ ! -z "$BWA" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/bwa/"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -190,6 +195,8 @@ if [ "$GENOME" == "mm9" ]; then
 elif [ "$GENOME" == "mm10" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
+    elif [ ! -z "$BWA" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bwa/"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -200,6 +207,8 @@ elif [ "$GENOME" == "mm10" ]; then
 elif [ "$GENOME" == "hg19" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie/genome_and_Abundant"
+    elif [ ! -z "$BWA" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/bwa/"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -210,6 +219,8 @@ elif [ "$GENOME" == "hg19" ]; then
 elif [ "$GENOME" == "hg38" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
+    elif [ ! -z "$BWA" ]; then
+        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/bwa/hg38.fa.chr"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
@@ -442,28 +453,35 @@ elif [ ! -z "$KALLISTO" ]; then
     kallisto quant -i $GENOMEINDEX -o $MAPDIR/$ID -b 100 --bias -l $KALLISTO_FL -s $KALLISTO_SD -t $PROCESSORS $FASTQ_FORWARD $FASTQ_REVERSE
 else
     if [ -z "$BAMTOBW" ]; then
-        if [ -z "$REPEATS" ]; then
+        if [ ! -z "$BWA" ]; then
             ## command check
-            echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS" >>$MAPDIR/$ID.mapStat
+            echo "Command used: bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS" >>$MAPDIR/$ID.mapStat
 
-            if [ ! -z "$UNIQUE" ]; then
-                bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+            bwa mem $GENOMEINDEX $FASTQ_FORWARD $FASTQ_REVERSE -t $PROCESSORS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam 
+        else
+            if [ -z "$REPEATS" ]; then
+                ## command check
+                echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS" >>$MAPDIR/$ID.mapStat
+
+                if [ ! -z "$UNIQUE" ]; then
+                    bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | grep -v XS: | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+                else
+                    bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+                fi
+     
+                #alignment (options...) \
+                #| samtools fixmate -m - - \
+                #| samtools sort -O BAM \
+                #| tee out_sorted_withDuplicates.bam \
+                #| samtools markdup -r - out_sorted_Markdup.bam
             else
+                ## computationally not feasible
+                #echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 --no-mixed" >>$MAPDIR/$ID.mapStat
+                #bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 --no-mixed 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
+                ## limited use, no NH: tag information
+                echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS" >>$MAPDIR/$ID.mapStat
                 bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
             fi
- 
-            #alignment (options...) \
-            #| samtools fixmate -m - - \
-            #| samtools sort -O BAM \
-            #| tee out_sorted_withDuplicates.bam \
-            #| samtools markdup -r - out_sorted_Markdup.bam
-        else
-            ## computationally not feasible
-            #echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 --no-mixed" >>$MAPDIR/$ID.mapStat
-            #bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS -D 15 -R 2 -N 0 -L 32 -i S,1,0.75 -k 10000 --no-mixed 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
-            ## limited use, no NH: tag information
-            echo "Command used: bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS" >>$MAPDIR/$ID.mapStat
-            bowtie2 -1 $FASTQ_FORWARD -2 $FASTQ_REVERSE -p $PROCESSORS -x $GENOMEINDEX $ALNMODE -5 $TRIM5 -3 $TRIM3 -I $MIN_FRAGMENT_LEN -X $MAX_FRAGMENT_LEN $ARGS 2>>$MAPDIR/$ID.mapStat | samtools view -S -b - | samtools sort -n -m 1500M - | samtools fixmate -m - $MAPDIR/$ID.bam
         fi
 
         TMP=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
