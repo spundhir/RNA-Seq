@@ -11,6 +11,8 @@ KALLISTO_FL=200
 KALLISTO_SD=30
 MIN_FRAGMENT_LEN=0
 MAX_FRAGMENT_LEN=500
+BARCODE_FILE="/tools/cellranger-7.1.0/lib/python/cellranger/barcodes/3M-february-2018.txt.gz"
+UMI_LEN=12
 
 #### usage ####
 usage() {
@@ -68,10 +70,17 @@ usage() {
     echo " -f <int>    [trim <int> bases from 5'/left end of reads (default: 0)]"
     echo " -t <int>    [trim <int> bases from 3'/right end of reads (default: 0)]"
     echo " -r          [map reads for repeat analysis (-u option is ignored)]"
+    echo "[OPTIONS: STAR (single-cell RNA-seq)]"
+    echo " -s          [perform alignment accommodating for splice junctions using STAR]"
+    echo " -b          [barcode file (default: /tools/cellranger-7.1.0/lib/python/cellranger/barcodes/3M-february-2018.txt.gz)]"
+    echo " -n          [length of the UMI (default: 12)]"
     echo "[OPTIONS: Kallisto (RNA-seq)]"
     echo " -K          [perform alignment using kallisto]"
     echo " -T <int>    [average fragment length (default: 200)]"
     echo " -N <int>    [standard deviation of fragment length (default: 30)]"
+    echo "[NOTE: mapping single cell data]"
+    echo "             [https://github.com/alexdobin/STAR/blob/master/docs/STARsolo.md]"
+    echo "             [1st file has to be cDNA read, and the 2nd file has to be the barcode (cell+UMI) read]"
     echo "[NOTE: splike-in scaling formula]"
     echo "             [https://www.sciencedirect.com/science/article/pii/S2211124714008729#app3]"
     echo "[NOTE: mapping to repeats]"
@@ -89,7 +98,7 @@ usage() {
 }
 
 #### parse options ####
-while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrBSKT:N:h ARG; do
+while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrBSsb:n:KT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ_FORWARD=$OPTARG;;
 		j) FASTQ_REVERSE=$OPTARG;;
@@ -123,6 +132,9 @@ while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrBSKT:N:h ARG; do
         r) REPEATS=1;;
         B) BWA=1;;
         S) STAR=1;;
+        s) STAR_SINGLE=1;;
+        b) BARCODE_FILE=$OPTARG;;
+        n) UMI_LEN=$OPTARG;;
         K) KALLISTO=1;;
         T) KALLISTO_FL=$OPTARG;;
         N) KALLISTO_SD=$OPTARG;;
@@ -183,7 +195,7 @@ echo -n "Populating files based on input genome, $GENOME (`date`).. "
 if [ "$GENOME" == "mm9" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie/Bowtie2IndexWithAbundance"
-    elif [ ! -z "$STAR" ]; then
+    elif [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/kallisto/Mus_musculus.NCBIM37.67.cdna.all.idx"
@@ -195,7 +207,7 @@ elif [ "$GENOME" == "mm10" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$BWA" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bwa/mm10.fa"
-    elif [ ! -z "$STAR" ]; then
+    elif [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/kallisto/Mus_musculus.GRCm38.cdna.all.idx"
@@ -205,7 +217,7 @@ elif [ "$GENOME" == "mm10" ]; then
 elif [ "$GENOME" == "hg19" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie/genome_and_Abundant"
-    elif [ ! -z "$STAR" ]; then
+    elif [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/kallisto/Homo_sapiens.GRCh37.cdna.all.idx"
@@ -217,7 +229,7 @@ elif [ "$GENOME" == "hg38" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$BWA" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/bwa/hg38.fa.chr"
-    elif [ ! -z "$STAR" ]; then
+    elif [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/kallisto/Homo_sapiens.GRCh38.cdna.all.idx"
@@ -227,7 +239,7 @@ elif [ "$GENOME" == "hg38" ]; then
 elif [ "$GENOME" == "hg19_ifn" ]; then
     GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/interferon_genes/interferon"
 elif [ "$GENOME" == "dm6" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Dro_melanogaster/dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Dro_melanogaster/dm6/kallisto/"
@@ -235,7 +247,7 @@ elif [ "$GENOME" == "dm6" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Dro_melanogaster/dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ERCC" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/kallisto/"
@@ -243,7 +255,7 @@ elif [ "$GENOME" == "ERCC" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg19_dm6" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/kallisto/"
@@ -251,7 +263,7 @@ elif [ "$GENOME" == "hg19_dm6" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "mm9_dm6" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/kallisto/"
@@ -259,7 +271,7 @@ elif [ "$GENOME" == "mm9_dm6" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "mm10_dm6" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm10_dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm10_dm6/kallisto/"
@@ -267,7 +279,7 @@ elif [ "$GENOME" == "mm10_dm6" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm10_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/kallisto/"
@@ -275,7 +287,7 @@ elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg38_mm10" -o "$GENOME" == "mm10_hg38" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg38_mm10/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg38_mm10/kallisto/"
@@ -283,7 +295,7 @@ elif [ "$GENOME" == "hg38_mm10" -o "$GENOME" == "mm10_hg38" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg38_mm10/bowtie2/Bowtie2IndexWithAbundance"
     fi  
 elif [ "$GENOME" == "ce11_dm6" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/kallisto/"
@@ -291,7 +303,7 @@ elif [ "$GENOME" == "ce11_dm6" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ce11_mm10" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/kallisto/"
@@ -299,7 +311,7 @@ elif [ "$GENOME" == "ce11_mm10" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ecoli" ]; then
-    if [ ! -z "$STAR" ]; then
+    if [ ! -z "$STAR" -o ! -z "$STAR_SINGLE" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/STAR"
     elif [ ! -z "$KALLISTO" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/kallisto/"
@@ -396,7 +408,11 @@ fi
 #echo "$GENOMEINDEX $READDIR $ID"; exit;
 
 ## start analysis
-if [ ! -z "$STAR" ]; then
+if [ ! -z "$STAR_SINGLE" ]; then
+    echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBWhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR" >> $MAPDIR/$ID.mapStat
+
+    STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBWhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR
+elif [ ! -z "$STAR" ]; then
     if [ -z "$BAMTOBW" ]; then
         if [ -z "$REPEATS" ]; then
             echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --outWigType bedGraph --outWigStrand Unstranded $ARGS" >> $MAPDIR/$ID.mapStat
