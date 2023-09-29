@@ -412,6 +412,14 @@ if [ ! -z "$STAR_SINGLE" ]; then
     echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBWhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR" >> $MAPDIR/$ID.mapStat
 
     STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBWhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR
+
+    mv $MAPDIR/$ID"Aligned.sortedByCoord.out.bam" $MAPDIR/$ID.bam
+    zless $MAPDIR/$ID"Log.final.out" >> $MAPDIR/$ID.mapStat
+    zless $MAPDIR/$ID"Log.progress.out" >> $MAPDIR/$ID.mapStat
+    zless $MAPDIR/$ID"Log.out" > $MAPDIR/$ID.log
+    zless $MAPDIR/$ID"SJ.out.tab" > $MAPDIR/$ID.SJ
+    samtools index -@ $PROCESSORS $MAPDIR/$ID.bam
+    rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
 elif [ ! -z "$STAR" ]; then
     if [ -z "$BAMTOBW" ]; then
         if [ -z "$REPEATS" ]; then
