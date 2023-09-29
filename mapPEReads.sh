@@ -11,7 +11,7 @@ KALLISTO_FL=200
 KALLISTO_SD=30
 MIN_FRAGMENT_LEN=0
 MAX_FRAGMENT_LEN=500
-BARCODE_FILE="/tools/cellranger-7.1.0/lib/python/cellranger/barcodes/3M-february-2018.txt.gz"
+BARCODE_FILE="/tools/cellranger-7.1.0/lib/python/cellranger/barcodes/3M-february-2018.txt"
 UMI_LEN=12
 
 #### usage ####
@@ -409,9 +409,9 @@ fi
 
 ## start analysis
 if [ ! -z "$STAR_SINGLE" ]; then
-    echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBWhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR" >> $MAPDIR/$ID.mapStat
+    echo "Command used: STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBwhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR" >> $MAPDIR/$ID.mapStat
 
-    STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBWhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR
+    STAR --genomeDir $GENOMEINDEX  --runThreadN $PROCESSORS --readFilesIn $FASTQ_FORWARD $FASTQ_REVERSE --readFilesCommand zless --outFileNamePrefix $MAPDIR/$ID --outSAMtype BAM SortedByCoordinate --clip3pNbases $TRIM3 --clip5pNbases $TRIM5 --soloType CB_UMI_Simple --soloCBwhitelist $BARCODE_FILE --soloUMIlen $UMI_LEN --clipAdapterType CellRanger4 --outFilterScoreMin 30 --soloCBmatchWLtype 1MM_multi_Nbase_pseudocounts --soloUMIfiltering MultiGeneUMI_CR --soloUMIdedup 1MM_CR
 
     mv $MAPDIR/$ID"Aligned.sortedByCoord.out.bam" $MAPDIR/$ID.bam
     zless $MAPDIR/$ID"Log.final.out" >> $MAPDIR/$ID.mapStat
@@ -601,6 +601,6 @@ if [ ! -z "$COPYDIR" ]; then
     echo -n "Delete copied fastq file(s) from $COPYDIR... "
     FASTQ_FORWARD=$(echo $FASTQ_FORWARD | sed 's/\,/ /g')
     FASTQ_REVERSE=$(echo $FASTQ_REVERSE | sed 's/\,/ /g')
-    rm $FASTQ_FORWARD $FASTQ_REVERSE
+    #rm $FASTQ_FORWARD $FASTQ_REVERSE
     echo "done"
 fi
