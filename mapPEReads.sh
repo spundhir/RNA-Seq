@@ -601,6 +601,6 @@ if [ ! -z "$COPYDIR" ]; then
     echo -n "Delete copied fastq file(s) from $COPYDIR... "
     FASTQ_FORWARD=$(echo $FASTQ_FORWARD | sed 's/\,/ /g')
     FASTQ_REVERSE=$(echo $FASTQ_REVERSE | sed 's/\,/ /g')
-    #rm $FASTQ_FORWARD $FASTQ_REVERSE
+    rm $FASTQ_FORWARD $FASTQ_REVERSE
     echo "done"
 fi
