@@ -572,7 +572,12 @@ COMMENT
 
         ID=$(echo $ID"_"$GENOME)
     elif [ ! -z "${SCALE_CUTANA}" ]; then
-        SCALE_SPIKEIN=$(cutana.sh -i $FASTQ_FORWARD,$FASTQ_REVERSE -H ${SCALE_CUTANA} | cut -f 3 | perl -ane '$_=sprintf("%0.0f", $_/2); $sum+=$_; END { print "$sum"; }' | perl -ane 'printf("%0.6f", 1000000/$_);');
+        SCALE_SPIKEIN=$(cutana.sh -i $FASTQ_FORWARD,$FASTQ_REVERSE -H ${SCALE_CUTANA} | cut -f 4 | perl -ane '$_=sprintf("%0.0f", $_/2); $sum+=$_; END { print "$sum"; }' | perl -ane 'printf("%0.6f", 1000000/$_);');
+        if [ -z "$SCALE_SPIKEIN" ]; then
+            >&2 echo -e "Error: cannot compute CATANA spike-in scale for ${SCALE_CUTANA} using $FASTQ_FORWARD,$FASTQ_REVERSE"
+            >&2 echo -e "Command used: cutana.sh -i $FASTQ_FORWARD,$FASTQ_REVERSE -H ${SCALE_CUTANA}"
+            exit
+        fi
     fi
     #echo "$SCALE_SPIKEIN"; exit
 

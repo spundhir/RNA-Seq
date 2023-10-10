@@ -63,12 +63,12 @@ fi
 if [ ! -z "${HISTONE_MOD}" ]; then
     grep -v "#" $BARCODE_FILE | grep -vE "^\s+$" | grep -w ${HISTONE_MOD} | while read -a line; do
         N=$(zgrep -c ${line[0]} ${FASTQ} | cut -f 2 -d ":" | awk '{s+=$1} END {print s}');
-        echo -e "${NAME}\t${line[1]}\t${N}"
+        echo -e "${NAME}\t${line[1]}\t${line[0]}\t${N}"
     done
 else
     grep -v "#" $BARCODE_FILE | grep -vE "^\s+$" | while read -a line; do
         N=$(zgrep -c ${line[0]} ${FASTQ} | cut -f 2 -d ":" | awk '{s+=$1} END {print s}');
-        echo -e "${NAME}\t${line[1]}\t${N}"
+        echo -e "${NAME}\t${line[1]}\t\t${line[0]}\t${N}"
     done
 fi
 >&2 echo "done"
