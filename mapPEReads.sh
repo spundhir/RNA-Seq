@@ -42,6 +42,12 @@ usage() {
     echo " -U          [remove PCR duplicate reads from output bam file (samtools markdup)]"
     echo " -c          [scale the read coverage to TPM in output bigWig files]"
     echo " -C          [scale the read coverage to 1x in output bigWig files]"
+    echo " -A <string> [scale the read coverage using CUTANA spike-in scales in output bigWig files]"
+    echo "             [h3k4me1, h3k4me2, h3k4me3]"
+    echo "             [h3k9me1, h3k9me2, h3k9me3]"
+    echo "             [h3k27me1, h3k27me2, h3k27me3]"
+    echo "             [h3k36me1, h3k36me2, h3k36me3]"
+    echo "             [h3k20me1, h3k20me2, h3k20me3]"
     echo " -e          [extend 3' end of reads in output bigWig files]"
     echo " -k <int>    [instead of reporting best alignment, report input number of alignments per read]"
     echo " -q <string> [end-to-end: --very-fast, --fast, --sensitive, --very-sensitive (default: --sensitive)]"
@@ -98,7 +104,7 @@ usage() {
 }
 
 #### parse options ####
-while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrBSsb:n:KT:N:h ARG; do
+while getopts i:j:m:g:p:d:y:auUcCA:ek:q:lf:t:L:I:D:E:W:X:QRYPZrBSsb:n:KT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ_FORWARD=$OPTARG;;
 		j) FASTQ_REVERSE=$OPTARG;;
@@ -112,6 +118,7 @@ while getopts i:j:m:g:p:d:y:auUcCek:q:lf:t:L:I:D:E:W:X:QRYPZrBSsb:n:KT:N:h ARG; 
         U) REMOVE_DUPLICATE=1;;
         c) SCALE=1;;
         C) SCALE1x=1;;
+        A) SCALE_CUTANA=$OPTARG;;
         e) EXTEND=1;;
         k) ALNCOUNT=$OPTARG;;
         q) ALNMODE=$OPTARG;;
@@ -564,6 +571,8 @@ COMMENT
         #SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "properly paired (" | cut -f 1 -d " " | perl -ane '$_=sprintf("%0.0f", $_/2); printf("%0.6f", 1000000/$_);');
 
         ID=$(echo $ID"_"$GENOME)
+    elif [ ! -z "${SCALE_CUTANA}" ]; then
+        SCALE_SPIKEIN=$(cutana.sh -i $FASTQ_FORWARD,$FASTQ_REVERSE -H ${SCALE_CUTANA} | cut -f 3 | perl -ane '$_=sprintf("%0.0f", $_/2); $sum+=$_; END { print "$sum"; }' | perl -ane 'printf("%0.6f", 1000000/$_);');
     fi
     #echo "$SCALE_SPIKEIN"; exit
 
