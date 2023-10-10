@@ -26,7 +26,7 @@ usage() {
 	echo " -b <file>   [barcode file (format: barcode id; default: ~/software/myScripts/RNAseq/BARCODES_CUTANA)]"
     echo " -H <string> [show count for the given histone modification (default: all)]"
     echo "             [unmodified]"
-    echo"              [h3k4me1, h3k4me2, h3k4me3]"
+    echo "             [h3k4me1, h3k4me2, h3k4me3]"
     echo "             [h3k9me1, h3k9me2, h3k9me3]"
     echo "             [h3k27me1, h3k27me2, h3k27me3]"
     echo "             [h3k36me1, h3k36me2, h3k36me3]"
