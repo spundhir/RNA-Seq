@@ -25,6 +25,7 @@ usage() {
 	echo " -g <string> [genome (default: mm9)]"
     echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, ce11_dm6, ce11_mm10]"
     echo "             [**NOTE**: cases like mm9_hg19: assembly post '_' is considered spikeIn (hg19)]"
+    echo "             [can also be path to directory containing STAR or BOWTIE index files]"
     echo " -p <int>    [number of processors (default: 1)]"
     echo "             [for STAR, keep it max to 20]"
     echo " -d <string> [identifier for output BAM file (default: same as fastq file)]"
@@ -285,6 +286,8 @@ elif [ "$GENOME" == "ecoli" ]; then
     else
         GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/bowtie2/Bowtie2IndexWithAbundance"
     fi
+elif [ -d "${GENOME}" ]; then
+    GENOMEINDEX=${GENOME}
 else
     echo "Presently the program only support analysis for mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, ce11_dm6, ce11_mm10"
     echo
@@ -427,19 +430,21 @@ if [ ! -z "$STAR" ]; then
         rm $MAPDIR/$ID"Signal.Unique.str1.out.bg"
         rm $MAPDIR/$ID"Signal.UniqueMultiple.str1.out.bg"
 
-        ## populating files based on input genome
-        if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
-            GENOME=$(echo $GENOME | sed 's/\_.*//g')
-        fi
-        GENOME_FILE=$(initialize_genome -i $FINDNFRPATH/data/annotations/GENOME_FILE -g $GENOME)
-        if [ ! -f "$GENOME_FILE" ]; then
-            echo
-            echo "computation create bigWig file for $GENOME"
-            echo "please add the chromosome size file for $GENOME at $FINDNFRPATH/data/annotations"
-            echo "also update the $FINDNFRPATH/data/annotations/GENOME_FILE"
-            echo
-        else
-            bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
+        if [ ! -d "${GENOME}" ]; then
+            ## populating files based on input genome
+            if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
+                GENOME=$(echo $GENOME | sed 's/\_.*//g')
+            fi
+            GENOME_FILE=$(initialize_genome -i $FINDNFRPATH/data/annotations/GENOME_FILE -g $GENOME)
+            if [ ! -f "$GENOME_FILE" ]; then
+                echo
+                echo "computation create bigWig file for $GENOME"
+                echo "please add the chromosome size file for $GENOME at $FINDNFRPATH/data/annotations"
+                echo "also update the $FINDNFRPATH/data/annotations/GENOME_FILE"
+                echo
+            else
+                bedGraphToBigWig $MAPDIR/$ID.bg $GENOME_FILE $MAPDIR/$ID.bw
+            fi
         fi
     fi
 elif [ ! -z "$KALLISTO" ]; then
@@ -498,83 +503,85 @@ else
             ID=$(echo $ID"_dupRemoved")
         fi
     fi
+
+    if [ ! -d "${GENOME}" ]; then
+        ## split bam file, if mapped to multiple genome assemblies (splike-in control)
+        if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
+            GENOME_SPIKEIN=$(echo $GENOME | sed 's/.*\_//g')
+
+            CHROM=$(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME_SPIKEIN | perl -ane 'chomp($_); print "$_ ";');
+            #echo "$GENOME_SPIKEIN $CHROM"; exit
+
+            if [ -z "$BAMTOBW" ]; then
+                ## samtools view misses a lot of read in the output as happened in MLL-AF9 project
+                #samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
+                cat <(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam) <(samtools view -@ $PROCESSORS -S $MAPDIR/$ID.bam | grep "_${GENOME_SPIKEIN}") | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -@ $PROCESSORS -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
+            fi
+
+            GENOME=$(echo $GENOME | sed 's/\_.*//g')
+
+            CHROM=$(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME | perl -ane 'chomp($_); print "$_ ";');
+
+            if [ -z "$BAMTOBW" ]; then
+                ## samtools view misses a lot of read in the output as happened in MLL-AF9 project
+                #samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME.bam
+                cat <(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam) <(samtools view -@ $PROCESSORS -S $MAPDIR/$ID.bam | grep "_${GENOME}") | sed 's/_'$GENOME'//g' | samtools view -@ $PROCESSORS -b - > $MAPDIR/$ID"_"$GENOME.bam
+
+                samtools index -@ $PROCESSORS $MAPDIR/$ID"_"$GENOME.bam
+            fi
+
+            #if [ -z "$REPEATS" ]; then
+                SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/${ID}_${GENOME_SPIKEIN}.bam)
+                #SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "mapped (" | cut -f 1 -d " " | perl -ane 'printf("%0.6f", 1000000/$_);');
+            #else 
+            #    SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam -u);
+            #fi
+
+            SPIKEIN=$GENOME_SPIKEIN
+
+            ID=$(echo $ID"_"$GENOME)
+        fi
+        #echo $SCALE_SPIKEIN; exit
+
+        ## create bigwig files for visualization at the UCSC genome browser
+        if [ -z "$STAR" -a -z "$KALLISTO" -a -z "$HIC" -a -z "$NOBAMTOBW" ]; then
+            if [ ! -z "$SPIKEIN" ]; then
+                echo -e "Using spike-in scale, $SCALE_SPIKEIN to normalize bigWig files.. "
+                if [ ! -z "$EXTEND" ]; then
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -z $SCALE_SPIKEIN -p $PROCESSORS
+                else
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -z $SCALE_SPIKEIN -p $PROCESSORS
+                fi
+                echo "done"
+            elif [ ! -z "$SCALE" ]; then
+                echo -e "Using RPKM scaling to normalize bigWig files.. "
+                if [ ! -z "$EXTEND" ]; then
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -c -p $PROCESSORS
+                else
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -c -p $PROCESSORS
+                fi
+                echo "done"
+            elif [ ! -z "$SCALE1x" ]; then
+                echo -e "Using 1x scaling to normalize bigWig files.. "
+                if [ ! -z "$EXTEND" ]; then
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -C -p $PROCESSORS
+                else
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -C -p $PROCESSORS
+                fi
+                echo "done"
+            else
+                echo -e "Using no scaling to normalize bigWig files.. "
+                if [ ! -z "$EXTEND" ]; then
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -p $PROCESSORS
+                else
+                    bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -p $PROCESSORS
+                fi
+                echo "done"
+            fi
+        fi
+    fi
+    echo "done"
 fi 
-
-## split bam file, if mapped to multiple genome assemblies (splike-in control)
-if [ "$(echo $GENOME | perl -ane 'if($_=~/\_/) { print 1; } else { print 0; }')" -eq 1 ]; then
-    GENOME_SPIKEIN=$(echo $GENOME | sed 's/.*\_//g')
-
-    CHROM=$(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME_SPIKEIN | perl -ane 'chomp($_); print "$_ ";');
-    #echo "$GENOME_SPIKEIN $CHROM"; exit
-
-    if [ -z "$BAMTOBW" ]; then
-        ## samtools view misses a lot of read in the output as happened in MLL-AF9 project
-        #samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
-        cat <(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam) <(samtools view -@ $PROCESSORS -S $MAPDIR/$ID.bam | grep "_${GENOME_SPIKEIN}") | sed 's/_'$GENOME_SPIKEIN'//g' | samtools view -@ $PROCESSORS -b - > $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam
-    fi
-
-    GENOME=$(echo $GENOME | sed 's/\_.*//g')
-
-    CHROM=$(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam | awk '$1 == "@SQ" {sub("SN:", "", $2); print $2}' | grep "_"$GENOME | perl -ane 'chomp($_); print "$_ ";');
-
-    if [ -z "$BAMTOBW" ]; then
-        ## samtools view misses a lot of read in the output as happened in MLL-AF9 project
-        #samtools view -S -h $MAPDIR/$ID.bam $CHROM | sed 's/_'$GENOME'//g' | samtools view -b - > $MAPDIR/$ID"_"$GENOME.bam
-        cat <(samtools view -@ $PROCESSORS -H $MAPDIR/$ID.bam) <(samtools view -@ $PROCESSORS -S $MAPDIR/$ID.bam | grep "_${GENOME}") | sed 's/_'$GENOME'//g' | samtools view -@ $PROCESSORS -b - > $MAPDIR/$ID"_"$GENOME.bam
-
-        samtools index -@ $PROCESSORS $MAPDIR/$ID"_"$GENOME.bam
-    fi
-
-    #if [ -z "$REPEATS" ]; then
-        SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/${ID}_${GENOME_SPIKEIN}.bam)
-        #SCALE_SPIKEIN=$(samtools flagstat $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam | grep "mapped (" | cut -f 1 -d " " | perl -ane 'printf("%0.6f", 1000000/$_);');
-    #else 
-    #    SCALE_SPIKEIN=$(bam2spikeInScale -i $MAPDIR/$ID"_"$GENOME_SPIKEIN.bam -u);
-    #fi
-
-    SPIKEIN=$GENOME_SPIKEIN
-
-    ID=$(echo $ID"_"$GENOME)
-fi
-#echo $SCALE_SPIKEIN; exit
-
-## create bigwig files for visualization at the UCSC genome browser
-if [ -z "$STAR" -a -z "$KALLISTO" -a -z "$HIC" -a -z "$NOBAMTOBW" ]; then
-    if [ ! -z "$SPIKEIN" ]; then
-        echo -e "Using spike-in scale, $SCALE_SPIKEIN to normalize bigWig files.. "
-        if [ ! -z "$EXTEND" ]; then
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -z $SCALE_SPIKEIN -p $PROCESSORS
-        else
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -z $SCALE_SPIKEIN -p $PROCESSORS
-        fi
-        echo "done"
-    elif [ ! -z "$SCALE" ]; then
-        echo -e "Using RPKM scaling to normalize bigWig files.. "
-        if [ ! -z "$EXTEND" ]; then
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -c -p $PROCESSORS
-        else
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -c -p $PROCESSORS
-        fi
-        echo "done"
-    elif [ ! -z "$SCALE1x" ]; then
-        echo -e "Using 1x scaling to normalize bigWig files.. "
-        if [ ! -z "$EXTEND" ]; then
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -C -p $PROCESSORS
-        else
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -C -p $PROCESSORS
-        fi
-        echo "done"
-    else
-        echo -e "Using no scaling to normalize bigWig files.. "
-        if [ ! -z "$EXTEND" ]; then
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -e -p $PROCESSORS
-        else
-            bam2bwForChIP -i $MAPDIR/$ID.bam -o $MAPDIR/ -g $GENOME -p $PROCESSORS
-        fi
-        echo "done"
-    fi
-fi
-echo "done"
 
 if [ ! -z "$COPYDIR" ]; then
     echo -n "Delete copied fastq file(s) from $COPYDIR... "
