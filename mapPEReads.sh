@@ -29,7 +29,7 @@ usage() {
 	echo "[OPTIONS]"
 	echo " -m <dir>    [output directory to store mapped reads (default: .)]"
 	echo " -g <string> [genome (default: mm9)]"
-    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, mm9_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, mm10_ecoli, ce11_dm6, ce11_mm10]"
+    echo "             [mm9, mm10, hg19, hg38, dm6, ERCC, hg19_dm6, mm9_dm6, hg19_mm9, mm9_hg19, hg38_mm10, mm10_hg38, mm10_dm6, mm10_ecoli, ce11_dm6, ce11_mm10]"
     echo "             [**NOTE**: cases like mm9_hg19: assembly post '_' is considered spikeIn (hg19)]"
     echo "             [can also be path to directory containing STAR or BOWTIE index files]"
     echo " -p <int>    [number of processors (default: 1)]"
