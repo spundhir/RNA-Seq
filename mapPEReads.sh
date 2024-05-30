@@ -5,6 +5,7 @@ MAPDIR="."
 PROCESSORS=1
 GENOME="mm9"
 ALNMODE="--sensitive"
+FILE_ADAPTERS="/localhome/bric/xfd783/software/Trimmomatic/adapters/TruSeq3-PE.fa"
 TRIM5=0
 TRIM3=0
 KALLISTO_FL=200
@@ -38,6 +39,7 @@ usage() {
     echo " -y <dir>    [copy input fastq file(s) to specified directory for mapping]"
     echo "             [useful when working on mounted directory]" 
     echo " -a          [trim adapters]"
+    echo " -F <file>   [file containing adapter sequences (default: /localhome/bric/xfd783/software/Trimmomatic/adapters/TruSeq3-PE.fa)"]
     echo "[OPTIONS: bowtie2 (ChIP- or RNA-seq) (default)]"
     echo " -u          [report only uniquely mapped reads]"
     echo " -U          [remove PCR duplicate reads from output bam file (samtools markdup)]"
@@ -105,7 +107,7 @@ usage() {
 }
 
 #### parse options ####
-while getopts i:j:m:g:p:d:y:auUcCA:ek:q:lf:t:L:I:D:E:W:X:QRYPZrBSsb:n:KT:N:h ARG; do
+while getopts i:j:m:g:p:d:y:aF:uUcCA:ek:q:lf:t:L:I:D:E:W:X:QRYPZrBSsb:n:KT:N:h ARG; do
 	case "$ARG" in
 		i) FASTQ_FORWARD=$OPTARG;;
 		j) FASTQ_REVERSE=$OPTARG;;
@@ -115,6 +117,7 @@ while getopts i:j:m:g:p:d:y:auUcCA:ek:q:lf:t:L:I:D:E:W:X:QRYPZrBSsb:n:KT:N:h ARG
         d) ID=$OPTARG;;
         y) COPYDIR=$OPTARG;;
         a) TRIM_ADAPTERS=1;;
+        F) FILE_ADAPTERS=$OPTARG;;
         u) UNIQUE=1;;
         U) REMOVE_DUPLICATE=1;;
         c) SCALE=1;;
@@ -355,7 +358,7 @@ if [ "$TRIM_ADAPTERS" ]; then
     FASTQFOWARDFILE=$(basename $FASTQ_FORWARD} | sed -E 's/\..*//g')
     FASTQREVERSEFILE=$(basename $FASTQ_REVERSE} | sed -E 's/\..*//g')
     if [ ! -s "${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz" -o ! -s "${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz" ]; then
-        trimmomatic PE ${FASTQ_FORWARD} ${FASTQ_REVERSE} ${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz ${FASTQDIR}/${FASTQFOWARDFILE}_trimmed_unpaired.fastq.gz ${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz ${FASTQDIR}/${FASTQREVERSEFILE}_trimmed_unpaired.fastq.gz ILLUMINACLIP:/localhome/bric/xfd783/software/Trimmomatic/adapters/TruSeq3-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
+        trimmomatic PE ${FASTQ_FORWARD} ${FASTQ_REVERSE} ${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz ${FASTQDIR}/${FASTQFOWARDFILE}_trimmed_unpaired.fastq.gz ${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz ${FASTQDIR}/${FASTQREVERSEFILE}_trimmed_unpaired.fastq.gz ILLUMINACLIP:${FILE_ADAPTERS}:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:4:15 MINLEN:36
     fi
     FASTQ_FORWARD="${FASTQDIR}/${FASTQFOWARDFILE}_trimmed.fastq.gz"
     FASTQ_REVERSE="${FASTQDIR}/${FASTQREVERSEFILE}_trimmed.fastq.gz"
