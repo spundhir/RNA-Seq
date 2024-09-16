@@ -63,8 +63,10 @@ if [ ! -z "$BAMFILE" ]; then
     if [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | wc -l)" -eq 2 ]; then
         GENOME['ref']=$(samtools idxstats $BAMFILE | perl -ane 'if($F[0]!~/\*/) { $F[0]=~s/^.*\_//g; $seen{$F[0]}+=$F[2]; } END { foreach(keys(%seen)) { print "$_\t$seen{$_}\n"; } }' | sort -k 2rn,2 | head -n 1 | tail -n 1 | cut -f 1);
         GENOME['spike']=$(samtools idxstats $BAMFILE | perl -ane 'if($F[0]!~/\*/) { $F[0]=~s/^.*\_//g; $seen{$F[0]}+=$F[2]; } END { foreach(keys(%seen)) { print "$_\t$seen{$_}\n"; } }' | sort -k 2rn,2 | head -n 2 | tail -n 1 | cut -f 1);
-    else
+    elif [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | wc -l)" -eq 1 ]; then
         GENOME['ref']=$(samtools idxstats $BAMFILE | perl -ane 'if($F[0]!~/\*/) { $F[0]=~s/^.*\_//g; $seen{$F[0]}+=$F[2]; } END { foreach(keys(%seen)) { print "$_\t$seen{$_}\n"; } }' | sort -k 2rn,2 | head -n 1 | tail -n 1 | cut -f 1);
+    else
+        GENOME['ref']=""
     fi
 fi
 
@@ -99,8 +101,10 @@ if [ -z "$STAR" ]; then
         if [ ! -z "$BAMFILE" ]; then
             if [ "${#GENOME[@]}" -eq 2 ]; then
                 echo -ne "\t${GENOME['ref']}_mapped\t${GENOME['spike']}_mapped"
-            else
+            elif [ "${#GENOME[@]}" -eq 1 ]; then
                 echo -ne "\t${GENOME['ref']}_mapped"
+            else
+                echo -ne "\tmapped"
             fi
 
             echo -ne "\t#reads (QC-passed)\t#reads (mapped)\t#reads (PCR duplicates)"
@@ -142,13 +146,21 @@ if [ -z "$STAR" ]; then
                 END {
                         print "\t$count{'${GENOME[ref]}'}\t$count{'${GENOME[spike]}'}";
                 }'
-            else
+            elif [ "${#GENOME[@]}" -eq 1 ]; then
                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                 if($F[0]!~/\*/) {
                     $F[0]=~s/^.*\_//g; $count{$F[0]}+=$F[2];
                 }
                 END {
                         print "\t$count{'${GENOME[ref]}'}";
+                }'
+            else
+               samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
+                if($F[0]!~/\*/) {
+                    $count+=$F[2];
+                }
+                END {
+                        print "\t$count";
                 }'
             fi
 
@@ -163,6 +175,9 @@ if [ -z "$STAR" ]; then
             ## compute signal to noise ratio
             if [ "${#GENOME[@]}" -eq 2 -a "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} | cut -f 3)
+                echo -ne "\t$SNRatio"
+            elif [ "${#GENOME[@]}" -eq 1 -a "$SNR" ]; then
+                SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} | cut -f 3)
                 echo -ne "\t$SNRatio"
             elif [ "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} | cut -f 3)
@@ -198,8 +213,10 @@ if [ -z "$STAR" ]; then
         if [ ! -z "$BAMFILE" ]; then
             if [ "${#GENOME[@]}" -eq 2 ]; then
                 echo -ne "\t${GENOME['ref']}_mapped (proper_pairs)\t${GENOME['spike']}_mapped (proper_pairs)"
-            else
+            elif [ "${#GENOME[@]}" -eq 1 ]; then
                 echo -ne "\t${GENOME['ref']}_mapped (proper_pairs)"
+            else
+                echo -ne "\tmapped (proper_pairs)"
             fi
 
             echo -ne "\t#reads (QC-passed)\t#reads (mapped)\t#reads (paired)\t#reads (singleton)\t#reads (PCR duplicates)"
@@ -242,7 +259,7 @@ if [ -z "$STAR" ]; then
                     END {
                         printf("\t%0.0f (%s)\t%0.0f (%s)", $count{'${GENOME[ref]}'}/2, '${PER_REF}', $count{'${GENOME[spike]}'}/2, '${PER_SPIKE}');
                     }'
-            else
+            elif [ "${#GENOME[@]}" -eq 1 ]; then
                 PER_REF=$(samtools flagstat ${BAMID}_${GENOME['ref']}.bam | perl -ane 'if($_=~/mapped \(/) { $_=~s/\s+.*//g; $mapped=$_/2; } elsif($_=~/properly paired/) { $_=~s/\s+.*//g; $properly_paired=$_/2; } END { $per=sprintf("%0.2f", ($properly_paired*100)/$mapped); print "$properly_paired\t$mapped\t$per\n"; }' | cut -f 3)
 
                 samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
@@ -251,6 +268,16 @@ if [ -z "$STAR" ]; then
                     }
                     END {
                         printf("\t%0.0f (%s)", $count{'${GENOME[ref]}'}/2, '${PER_REF}');
+                    }'
+            else
+                PER_REF=$(samtools flagstat ${BAMID}.bam | perl -ane 'if($_=~/mapped \(/) { $_=~s/\s+.*//g; $mapped=$_/2; } elsif($_=~/properly paired/) { $_=~s/\s+.*//g; $properly_paired=$_/2; } END { $per=sprintf("%0.2f", ($properly_paired*100)/$mapped); print "$properly_paired\t$mapped\t$per\n"; }' | cut -f 3)
+
+                samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
+                    if($F[0]!~/\*/) {
+                        $count+=$F[2];
+                    }
+                    END {
+                        printf("\t%0.0f (%s)", $count/2, '${PER_REF}');
                     }'
             fi
 
@@ -267,6 +294,9 @@ if [ -z "$STAR" ]; then
             ## compute signal to noise ratio
             if [ "${#GENOME[@]}" -eq 2 -a "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMID}_${GENOME['ref']}.bam -g ${GENOME['ref']} -P | cut -f 3)
+                echo -ne "\t$SNRatio"
+            elif [ "${#GENOME[@]}" -eq 1 -a "$SNR" ]; then
+                SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} -P | cut -f 3)
                 echo -ne "\t$SNRatio"
             elif [ "$SNR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} -P | cut -f 3)
