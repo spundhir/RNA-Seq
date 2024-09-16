@@ -65,8 +65,6 @@ if [ ! -z "$BAMFILE" ]; then
         GENOME['spike']=$(samtools idxstats $BAMFILE | perl -ane 'if($F[0]!~/\*/) { $F[0]=~s/^.*\_//g; $seen{$F[0]}+=$F[2]; } END { foreach(keys(%seen)) { print "$_\t$seen{$_}\n"; } }' | sort -k 2rn,2 | head -n 2 | tail -n 1 | cut -f 1);
     elif [ "$(samtools idxstats $BAMFILE 2>/dev/null | cut -f 1 | grep "_"  | cut -f 2 -d "_" | sort  | uniq | wc -l)" -eq 1 ]; then
         GENOME['ref']=$(samtools idxstats $BAMFILE | perl -ane 'if($F[0]!~/\*/) { $F[0]=~s/^.*\_//g; $seen{$F[0]}+=$F[2]; } END { foreach(keys(%seen)) { print "$_\t$seen{$_}\n"; } }' | sort -k 2rn,2 | head -n 1 | tail -n 1 | cut -f 1);
-    else
-        GENOME['ref']=""
     fi
 fi
 
@@ -270,7 +268,7 @@ if [ -z "$STAR" ]; then
                         printf("\t%0.0f (%s)", $count{'${GENOME[ref]}'}/2, '${PER_REF}');
                     }'
             else
-                PER_REF=$(samtools flagstat ${BAMID}.bam | perl -ane 'if($_=~/mapped \(/) { $_=~s/\s+.*//g; $mapped=$_/2; } elsif($_=~/properly paired/) { $_=~s/\s+.*//g; $properly_paired=$_/2; } END { $per=sprintf("%0.2f", ($properly_paired*100)/$mapped); print "$properly_paired\t$mapped\t$per\n"; }' | cut -f 3)
+                PER_REF=$(samtools flagstat ${BAMFILE} | perl -ane 'if($_=~/mapped \(/) { $_=~s/\s+.*//g; $mapped=$_/2; } elsif($_=~/properly paired/) { $_=~s/\s+.*//g; $properly_paired=$_/2; } END { $per=sprintf("%0.2f", ($properly_paired*100)/$mapped); print "$properly_paired\t$mapped\t$per\n"; }' | cut -f 3)
 
                 samtools idxstats $BAMFILE 2>/dev/null | perl -ane '
                     if($F[0]!~/\*/) {
@@ -299,7 +297,8 @@ if [ -z "$STAR" ]; then
                 SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} -P | cut -f 3)
                 echo -ne "\t$SNRatio"
             elif [ "$SNR" ]; then
-                SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GENOME['ref']} -P | cut -f 3)
+                GN=$(grep bowtie2 ${MAPSTATFILE} | sed -E 's/\/bowtie2.*//g' | sed -E 's/^.*\///g')
+                SNRatio=$(bam2signalVsNoise -i ${BAMFILE} -g ${GN} -P | cut -f 3)
                 echo -ne "\t$SNRatio"
             fi
 
