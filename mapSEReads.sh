@@ -304,6 +304,8 @@ if [ ! -z "$TRIM_FASTQ_DIR" -a -z "$BAMTOBW" ]; then
     FASTQFILES_COUNT=${#FASTQFILES[@]}
     IFS=$oIFS
 
+    mkdir -p ${TRIM_FASTQ_DIR}
+
     FASTQ=""
     for(( i=0; i<$FASTQFILES_COUNT; i++ )); do
         TEMPID=`echo ${FASTQFILES[$i]} | perl -an -F'/\,/' -e '$TEMPID=(); foreach(@F) { $_=~s/^.+\///g; $_=~s/\..+$//g; chomp($_); $TEMPID.=$_."_"; } $TEMPID=~s/\_$//g; print "$TEMPID\n";' | perl -an -F'//' -e 'chomp($_); if(scalar(@F)>50) { $_=~s/\_R[0-9]+.*$//g; print "$_\n"; } else { print "$_\n"; }'`;
