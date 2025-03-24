@@ -182,7 +182,7 @@ elif [ "$GENOME" == "mm10" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$BWA" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/BWA/mm10.fa"
+        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bwa/mm10.fa"
     elif [ ! -z "$STAR" ]; then
         GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
