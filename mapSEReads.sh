@@ -170,121 +170,121 @@ echo done
 echo -n "Populating files based on input genome, $GENOME (`date`).. "
 if [ "$GENOME" == "mm9" ]; then
     if [ ! -z "$REPENRICH" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/Ensembl/NCBIM37/Bowtie2IndexWithAbundance/bowtie/Bowtie2IndexWithAbundance"
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/STAR/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/mm9/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/kallisto/Mus_musculus.NCBIM37.67.cdna.all.idx"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/mm9/kallisto/Mus_musculus.NCBIM37.67.cdna.all.idx"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm9/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/mm9/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "mm10" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$BWA" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bwa/mm10.fa"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/mm10/bwa/mm10.fa"
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/STAR/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/mm10/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/kallisto/Mus_musculus.GRCm38.cdna.all.idx"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/mm10/kallisto/Mus_musculus.GRCm38.cdna.all.idx"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/Mus_musculus/mm10/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Mus_musculus/mm10/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg19" ]; then
     if [ ! -z "$REPENRICH" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie/genome_and_Abundant"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/Ensembl/GRCh37/Bowtie2IndexInklAbundant/bowtie/genome_and_Abundant"
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/STAR/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/hg19/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/kallisto/Homo_sapiens.GRCh37.cdna.all.idx"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/hg19/kallisto/Homo_sapiens.GRCh37.cdna.all.idx"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg19/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/hg19/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg38" ]; then
     if [ ! -z "$REPENRICH" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$BWA" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/bwa/hg38.fa.chr"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/hg38/bwa/hg38.fa.chr"
     elif [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/STAR/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/hg38/STAR/"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/kallisto/Homo_sapiens.GRCh38.cdna.all.idx"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/hg38/kallisto/Homo_sapiens.GRCh38.cdna.all.idx"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/hg38/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/hg38/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg19_ifn" ]; then
-    GENOMEINDEX="/scratch/genomes/assemblies/Homo_sapiens/interferon_genes/interferon"
+    GENOMEINDEX="/home/xfd783/genomes/assemblies/Homo_sapiens/interferon_genes/interferon"
 elif [ "$GENOME" == "dm6" ]; then
     if [ ! -z "$STAR" ]; then
         GENOMEINDEX=""
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/Dro_melanogaster/dm6/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Dro_melanogaster/dm6/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/Dro_melanogaster/dm6/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/Dro_melanogaster/dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ERCC" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ERCC/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ERCC/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ERCC/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ERCC/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg19_dm6" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg19_dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg19_dm6/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_dm6/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg19_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "mm9_dm6" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/mm9_dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/mm9_dm6/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/mm9_dm6/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/mm9_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi  
 elif [ "$GENOME" == "hg19_mm9" -o "$GENOME" == "mm9_hg19" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg19_mm9/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg19_mm9/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg19_mm9/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg19_mm9/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "hg38_mm10" -o "$GENOME" == "mm10_hg38" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg38_mm10/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg38_mm10/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg38_mm10/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg38_mm10/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/hg38_mm10/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/hg38_mm10/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ce11_dm6" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ce11_dm6/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ce11_dm6/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_dm6/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ce11_dm6/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ce11_mm10" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ce11_mm10/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ce11_mm10/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ce11_mm10/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ce11_mm10/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ "$GENOME" == "ecoli" ]; then
     if [ ! -z "$STAR" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/STAR"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ecoli/STAR"
     elif [ ! -z "$KALLISTO" ]; then
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/kallisto/"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ecoli/kallisto/"
     else
-        GENOMEINDEX="/scratch/genomes/assemblies/spikeIn/ecoli/bowtie2/Bowtie2IndexWithAbundance"
+        GENOMEINDEX="/home/xfd783/genomes/assemblies/spikeIn/ecoli/bowtie2/Bowtie2IndexWithAbundance"
     fi
 elif [ -d "${GENOME}" ]; then
     GENOMEINDEX=${GENOME}
