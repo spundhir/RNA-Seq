@@ -28,8 +28,9 @@ if(is.null(opt$countFile) | is.null(opt$treatment)) {
 
 ## load libraries
 suppressPackageStartupMessages(library(DESeq2))
-suppressPackageStartupMessages(library(session))
+#suppressPackageStartupMessages(library(session))
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(calibrate))
 
 ## create output directory, if does not exist
 dir.create(file.path(opt$outDir), showWarnings = FALSE)
@@ -227,7 +228,6 @@ pvalue_threshold=1/exp(pvalue_threshold*log(10))
 with(subset(df, padj<pvalue_threshold), points(log2FoldChange, -log10(pvalue), pch=20, col="red"))
 
 # Label points with the textxy function from the calibrate plot
-library(calibrate)
 with(subset(df, padj<pvalue_threshold), textxy(log2FoldChange, -log10(pvalue), labs=gene, cex=.8))
 dev.off()
 
@@ -242,7 +242,7 @@ write.table(countTable_norm[order(-as.data.frame(res)[,2]),], file=sprintf("%s/%
 print(size_factors)
 
 ## save the session for further use
-save.session(sprintf("%s/%s.session", opt$outDir, outFile))
+save.image(sprintf("%s/%s.RData", opt$outDir, outFile))
 
 
 ## code for unknown batch effects

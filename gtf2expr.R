@@ -38,7 +38,7 @@ if(is.null(opt$configFile) | is.null(opt$outFile) | (is.null(opt$gtfFile) & is.n
 suppressPackageStartupMessages(library("Rsubread"))
 suppressPackageStartupMessages(library(biomaRt))
 suppressPackageStartupMessages(library(ensembldb))
-suppressPackageStartupMessages(library(session))
+#suppressPackageStartupMessages(library(session))
 
 if(identical(opt$configFile, "stdin")==T) { 
     data <- read.table(file("stdin"), stringsAsFactors=F)
@@ -121,4 +121,4 @@ if(is.null(opt$repeats)) {
 
     write.table(all, opt$outFile, sep="\t", quote = F, col.names = T, row.names = F)
 }
-save.session("featureCounts.session")
+save.image("featureCounts.RData")

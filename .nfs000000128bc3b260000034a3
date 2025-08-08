@@ -191,7 +191,6 @@ if [ ! -z "$COPYDIR" ]; then
         TEMPID=$(echo ${FASTQFILES[$i]} | perl -ane '$_=~s/^.*\///g; print $_;')
         if [ ! -s "$COPYDIR/$TEMPID" ]; then
             scp ${FASTQFILES[$i]} $COPYDIR/$TEMPID
-            chmod 644 $COPYDIR/$TEMPID
         fi
         FASTQ_REVERSE="$FASTQ_REVERSE,$COPYDIR/$TEMPID"
     done
@@ -443,7 +442,6 @@ if [ ! -z "$STAR_SINGLE" ]; then
     zless $MAPDIR/$ID"SJ.out.tab" > $MAPDIR/$ID.SJ
     samtools index -@ $PROCESSORS $MAPDIR/$ID.bam
     rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
-    rm -r $MAPDIR/${ID}"_STARtmp"
 elif [ ! -z "$STAR" ]; then
     if [ -z "$BAMTOBW" ]; then
         if [ -z "$REPEATS" ]; then
@@ -463,7 +461,6 @@ elif [ ! -z "$STAR" ]; then
         zless $MAPDIR/$ID"SJ.out.tab" > $MAPDIR/$ID.SJ
         samtools index -@ $PROCESSORS $MAPDIR/$ID.bam
         rm $MAPDIR/$ID"Log.final.out" $MAPDIR/$ID"Log.progress.out" $MAPDIR/$ID"Log.out" $MAPDIR/$ID"SJ.out.tab"
-        rm -r $MAPDIR/${ID}"_STARtmp"
 
         ## create bigwig files for visualization at the UCSC genome browser
         # ls *.bg | parallel -j 1 'sort -k 1,1 -k 2n,2 {} > {.}.sort'
