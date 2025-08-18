@@ -25,7 +25,7 @@ if(is.null(opt$inFile)) {
 
 ## load libraries
 suppressPackageStartupMessages(library(biomaRt))
-suppressPackageStartupMessages(library(session))
+#suppressPackageStartupMessages(library(session))
 suppressPackageStartupMessages(library(ggplot2))
 
 ## read input file
@@ -52,8 +52,9 @@ if(is.numeric(data[,1])) {
 data[,1] <- gsub("\\..*", "", data[,1])
 
 ################################################
-## BIOMART USAGE
+## BIOMART USAGE (https://bioconductor.org/packages/release/bioc/vignettes/biomaRt/inst/doc/accessing_ensembl.html)
 # listMarts(); ensembl = useMart("ENSEMBL_MART_ENSEMBL"); listDatasets(ensembl); listAttributes(mart)
+# listEnsembl(); listEnsemblArchives(); listDatasets(useEnsembl(biomart = "genes")); listAttributes(useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 114))
 # Use the http://www.ensembl.org website and go down the bottom of the page. Click on ’view in Archive’ and select the archive you need. Copy the url and use that url as shown below to connect to the specified BioMart database. The example below shows how to query Ensembl 54.
 # > listMarts(host = "may2009.archive.ensembl.org")
 # > ensembl54 = useMart(host = "may2009.archive.ensembl.org", biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
@@ -66,9 +67,11 @@ if(opt$organism=="hg19") {
 } else if(opt$organism=="mm9") {
     mart = useMart(host = "may2012.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
 } else if(opt$organism=="hg38") {
-    mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+    #mart = useMart(host = "https://apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+    mart <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 114)
 } else if(opt$organism=="mm10") {
-    mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
+    #mart = useMart(host = "https://apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
+    mart <- useEnsembl(biomart = "genes", dataset = "mmusculus_gene_ensembl", version = 102)
 } else {
 	cat("Unknown organism provided\n");
 	print_help(parser)
@@ -78,7 +81,7 @@ if(opt$organism=="hg19") {
 if(is.null(opt$bed)) {
     result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name"), values=data[,1], mart=mart)
     #data$geneName <- as.vector(unlist(apply(data, 1, function(x) result[which(result$ensembl_gene_id==x[1]),2])))
-
+    result[which(result$external_gene_name==""),]$external_gene_name <- NA
     result <- merge(data, result, by.x=colnames(data)[1], by.y="ensembl_gene_id")
 
     outfile=sprintf("%s.geneId", opt$inFile)
@@ -86,6 +89,7 @@ if(is.null(opt$bed)) {
 } else {
     result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name", "chromosome_name", "start_position", "end_position", "strand"), values=data[,1], mart=mart)
     #data$geneName <- as.vector(unlist(apply(data, 1, function(x) result[which(result$ensembl_gene_id==x[1]),2])))
+    result[which(result$external_gene_name==""),]$external_gene_name <- NA
 
     result <- merge(data, result, by.x=colnames(data)[1], by.y="ensembl_gene_id")
 
