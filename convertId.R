@@ -81,7 +81,9 @@ if(opt$organism=="hg19") {
 if(is.null(opt$bed)) {
     result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name"), values=data[,1], mart=mart)
     #data$geneName <- as.vector(unlist(apply(data, 1, function(x) result[which(result$ensembl_gene_id==x[1]),2])))
-    result[which(result$external_gene_name==""),]$external_gene_name <- NA
+    if(length(which(result$external_gene_name==""))>0) {
+        result[which(result$external_gene_name==""),]$external_gene_name <- NA
+    }
     result <- merge(data, result, by.x=colnames(data)[1], by.y="ensembl_gene_id")
 
     outfile=sprintf("%s.geneId", opt$inFile)
@@ -89,7 +91,9 @@ if(is.null(opt$bed)) {
 } else {
     result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name", "chromosome_name", "start_position", "end_position", "strand"), values=data[,1], mart=mart)
     #data$geneName <- as.vector(unlist(apply(data, 1, function(x) result[which(result$ensembl_gene_id==x[1]),2])))
-    result[which(result$external_gene_name==""),]$external_gene_name <- NA
+    if(length(which(result$external_gene_name==""))>0) {
+        result[which(result$external_gene_name==""),]$external_gene_name <- NA
+    }
 
     result <- merge(data, result, by.x=colnames(data)[1], by.y="ensembl_gene_id")
 
