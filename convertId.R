@@ -27,6 +27,7 @@ if(is.null(opt$inFile)) {
 suppressPackageStartupMessages(library(biomaRt))
 #suppressPackageStartupMessages(library(session))
 suppressPackageStartupMessages(library(ggplot2))
+suppressPackageStartupMessages(library(dplyr))
 
 ## read input file
 if(is.null(opt$tab)) {
@@ -67,11 +68,11 @@ if(opt$organism=="hg19") {
 } else if(opt$organism=="mm9") {
     mart = useMart(host = "may2012.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
 } else if(opt$organism=="hg38") {
-    #mart = useMart(host = "https://apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
-    mart <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 114)
+    mart = useMart(host = "https://apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+    #mart <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 114)
 } else if(opt$organism=="mm10") {
-    #mart = useMart(host = "https://apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
-    mart <- useEnsembl(biomart = "genes", dataset = "mmusculus_gene_ensembl", version = 102)
+    mart = useMart(host = "https://apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
+    #mart <- useEnsembl(biomart = "genes", dataset = "mmusculus_gene_ensembl", version = 102)
 } else {
 	cat("Unknown organism provided\n");
 	print_help(parser)
@@ -79,23 +80,25 @@ if(opt$organism=="hg19") {
 }
 
 if(is.null(opt$bed)) {
-    result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name"), values=data[,1], mart=mart)
+    result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name"), values=unique(data[,1]), mart=mart)
     #data$geneName <- as.vector(unlist(apply(data, 1, function(x) result[which(result$ensembl_gene_id==x[1]),2])))
     if(length(which(result$external_gene_name==""))>0) {
         result[which(result$external_gene_name==""),]$external_gene_name <- NA
     }
     result <- merge(data, result, by.x=colnames(data)[1], by.y="ensembl_gene_id")
+    # data %>% left_join(result, by = c(colnames(data)[1] = "ensembl_gene_id")) ## faster
 
     outfile=sprintf("%s.geneId", opt$inFile)
     write.table(result, "", sep="\t", quote=F, row.names=F, col.names=as.logical(opt$header))
 } else {
-    result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name", "chromosome_name", "start_position", "end_position", "strand"), values=data[,1], mart=mart)
+    result <- getBM(filters="ensembl_gene_id", attributes=c("ensembl_gene_id", "external_gene_name", "chromosome_name", "start_position", "end_position", "strand"), values=unique(data[,1]), mart=mart)
     #data$geneName <- as.vector(unlist(apply(data, 1, function(x) result[which(result$ensembl_gene_id==x[1]),2])))
     if(length(which(result$external_gene_name==""))>0) {
         result[which(result$external_gene_name==""),]$external_gene_name <- NA
     }
 
     result <- merge(data, result, by.x=colnames(data)[1], by.y="ensembl_gene_id")
+    # data %>% left_join(result, by = c(colnames(data)[1] = "ensembl_gene_id")) ## faster
 
     outfile=sprintf("%s.bed", opt$inFile)
     start <- ncol(result)-3
