@@ -3,7 +3,7 @@
 suppressPackageStartupMessages(library("optparse"))
 suppressPackageStartupMessages(library("seqLogo"))
 suppressPackageStartupMessages(library("Biostrings"))
-suppressPackageStartupMessages(library("session"))
+#suppressPackageStartupMessages(library("session"))
 
 ## parse command line arguments
 option_list <- list(
