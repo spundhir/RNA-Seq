@@ -146,6 +146,7 @@ if [ ! -z "$COPYDIR" ]; then
         TEMPID=$(echo ${FASTQFILES[$i]} | perl -ane '$_=~s/^.*\///g; print $_;')
         if [ ! -s "$COPYDIR/$TEMPID" ]; then
             scp ${FASTQFILES[$i]} $COPYDIR/$TEMPID
+            chmod 644 $COPYDIR/$TEMPID
         fi
         FASTQ="$FASTQ,$COPYDIR/$TEMPID"
     done
