@@ -1,4 +1,5 @@
-#!/usr/bin/env Rscript
+#!/opt/software/R/4.5.1/bin/Rscript
+######!/usr/bin/env Rscript
 suppressPackageStartupMessages(library("optparse"))
 
 ## parse command line arguments
@@ -61,9 +62,11 @@ if(opt$genome=="hg19") {
 } else if(opt$genome=="mm9") {
     mart = useMart(host = "may2012.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
 } else if(opt$genome=="hg38") {
-    mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+    #mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "hsapiens_gene_ensembl")
+    mart <- useEnsembl(biomart = "genes", dataset = "hsapiens_gene_ensembl", version = 114)
 } else if(opt$genome=="mm10") {
-    mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
+    #mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "mmusculus_gene_ensembl")
+    mart <- useEnsembl(biomart = "genes", dataset = "mmusculus_gene_ensembl", version = 102)
 } else if(opt$genome=="dm6") {
     mart = useMart(host = "apr2020.archive.ensembl.org",  biomart = "ENSEMBL_MART_ENSEMBL", dataset = "dmelanogaster_gene_ensembl")
 } else if(opt$genome!="ercc") {
